@@ -5,6 +5,8 @@ VisualStudioVersion = 17.8.34330.188
 MinimumVisualStudioVersion = 10.0.40219.1
 Project("{8BC9CEB8-8B4A-11D0-8D11-00A0C91BC942}") = "fft_lines", "fft_lines\fft_lines.vcxproj", "{BE8D67C9-5DEB-45D8-82C4-046DB2BC5677}"
 EndProject
+Project("{54435603-DBB4-11D2-8724-00A0C9A8B90C}") = "fft_lines_setup", "fft_lines_setup\fft_lines_setup.vdproj", "{3CADC340-FDEB-4ABE-B704-3C432B5B2458}"
+EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
 		Debug|x64 = Debug|x64
@@ -21,6 +23,10 @@ Global
 		{BE8D67C9-5DEB-45D8-82C4-046DB2BC5677}.Release|x64.Build.0 = Release|x64
 		{BE8D67C9-5DEB-45D8-82C4-046DB2BC5677}.Release|x86.ActiveCfg = Release|Win32
 		{BE8D67C9-5DEB-45D8-82C4-046DB2BC5677}.Release|x86.Build.0 = Release|Win32
+		{3CADC340-FDEB-4ABE-B704-3C432B5B2458}.Debug|x64.ActiveCfg = Debug
+		{3CADC340-FDEB-4ABE-B704-3C432B5B2458}.Debug|x86.ActiveCfg = Debug
+		{3CADC340-FDEB-4ABE-B704-3C432B5B2458}.Release|x64.ActiveCfg = Release
+		{3CADC340-FDEB-4ABE-B704-3C432B5B2458}.Release|x86.ActiveCfg = Release
 	EndGlobalSection
 	GlobalSection(SolutionProperties) = preSolution
 		HideSolutionNode = FALSE
