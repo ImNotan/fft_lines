@@ -118,7 +118,7 @@ LRESULT CALLBACK WndProc(HWND hwnd, UINT msg, WPARAM wParam, LPARAM lParam)
 					}
 					else
 					{
-						MessageBoxA(hwnd, "Failed to allocate memory for input", "Warning", MB_OK);
+						MessageBoxA(hwnd, "Failed to allocate memory for input or output", "Warning", MB_OK);
 						SendMessageW(hwnd, WM_DESTROY, NULL, NULL);
 					}
 
@@ -245,7 +245,7 @@ LRESULT CALLBACK WndProc(HWND hwnd, UINT msg, WPARAM wParam, LPARAM lParam)
 	return 0;
 }
 
-int WINAPI WinMain(HINSTANCE hInstance, HINSTANCE hPrevInstance, LPSTR lpCmdLine, int nCmdShow)
+int WINAPI WinMain(_In_ HINSTANCE hInstance, _In_opt_ HINSTANCE hPrevInstance, _In_ LPSTR lpCmdLine, _In_ int nCmdShow)
 {
 	WNDCLASSEX wc;
 	HWND hwnd;

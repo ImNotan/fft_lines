@@ -16,7 +16,7 @@ typedef struct _BARINFO
 }BARINFO;
 
 extern float zoom;
-extern int colorSel;
+extern LRESULT colorSel;
 
 extern int barCount;
 extern BARINFO* bar;

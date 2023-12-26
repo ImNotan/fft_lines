@@ -80,7 +80,7 @@ void DrawBar(HDC hdc, RECT* prc)
 		//makes the bottom of the bar darker for a 3d effect
 		if (gradient)
 		{
-			setColor(1 / (float)(255) * (float)((((float)i / ((float)barCount - 1.0))) * 254.0), &rgb);
+			setColor(1 / (float)(255) * (float)((((float)i / ((float)barCount - 1.0))) * 254.0), rgb);
 			vertex[0].x = bar[i].x;
 			vertex[0].y = prc->bottom - bar[i].height;
 			vertex[0].Red = rgb[0] * 256;
@@ -90,9 +90,9 @@ void DrawBar(HDC hdc, RECT* prc)
 
 			vertex[1].x = bar[i].x + bar[i].width;
 			vertex[1].y = prc->bottom;
-			vertex[1].Red = vertex[0].Red * 0.5;
-			vertex[1].Green = vertex[0].Green * 0.5;
-			vertex[1].Blue = vertex[0].Blue * 0.5;
+			vertex[1].Red = (COLOR16)((float)vertex[0].Red * 0.5f);
+			vertex[1].Green = (COLOR16)((float)vertex[0].Green * 0.5f);
+			vertex[1].Blue = (COLOR16)((float)vertex[0].Blue * 0.5f);
 			vertex[1].Alpha = 0x0000;
 
 			GRADIENT_RECT gRect;
