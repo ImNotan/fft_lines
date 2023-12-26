@@ -10,21 +10,21 @@
 #include "global.h"
 #include "serial.h"
 
-#define IDC_LEFT_BARCOUNT_LABEL			1000
-#define IDC_RIGHT_BARCOUNT_LABEL		1001
-#define IDC_SLIDER_BARCOUNT				1002
-#define IDC_SLIDER_ZOOM					1003
+#define IDC_LEFT_BARCOUNT_LABEL			(HMENU)1000
+#define IDC_RIGHT_BARCOUNT_LABEL		(HMENU)1001
+#define IDC_SLIDER_BARCOUNT				(HMENU)1002
+#define IDC_SLIDER_ZOOM					(HMENU)1003
 
-#define IDC_SET_BARCOUNT_DESCRIBTION	1007
-#define IDC_EDIT_BARCOUNT				1008
+#define IDC_SET_BARCOUNT_DESCRIBTION	(HMENU)1007
+#define IDC_EDIT_BARCOUNT				(HMENU)1008
 
-#define IDC_BUTTON_BORDER				1010
-#define IDC_BUTTON_BACKGROUND			1011
-#define IDC_BUTTON_GRADIENT				1012
-#define IDC_BUTTON_CONNECTSERIAL		1013
-#define IDC_BUTTON_IGNORESERIAL			1014
+#define IDC_BUTTON_BORDER				(HMENU)1010
+#define IDC_BUTTON_BACKGROUND			(HMENU)1011
+#define IDC_BUTTON_GRADIENT				(HMENU)1012
+#define IDC_BUTTON_CONNECTSERIAL		(HMENU)1013
+#define IDC_BUTTON_IGNORESERIAL			(HMENU)1014
 
-#define IDC_COMBO_COLORS				1020
+#define IDC_COMBO_COLORS				(HMENU)1020
 
 HWND hBarcountSlider;
 HWND hZoomSlider;
@@ -33,7 +33,7 @@ HWND hwndComboBox;
 HWND SettingsDlg = NULL;
 
 float zoom = 0.0001f;
-int colorSel = 0;
+LRESULT colorSel = 0;
 
 int barCount = 500;
 BARINFO* bar;
@@ -68,7 +68,7 @@ void initializeSettingsFile(HWND hwnd)
 	}
 }
 
-void setVariable(char* value[10], int variableNumber)
+void setVariable(char* value, int variableNumber)
 {
 	switch (variableNumber)
 	{
@@ -77,11 +77,11 @@ void setVariable(char* value[10], int variableNumber)
 		break;
 
 	case 1:
-		zoom = atof(value);
+		zoom = (float)atof(value);
 		break;
 
 	case 2:
-		colorSel = atoi(value);
+		colorSel = _atoi64(value);
 		break;
 
 	case 3:
@@ -106,8 +106,9 @@ void readSettings()
 {
 	char nextchar[1];
 	DWORD bytes_read = 0;
-	INT64 fileSize;
-	GetFileSizeEx(hSettingsFile, &fileSize);
+	LARGE_INTEGER PfileSize;
+	GetFileSizeEx(hSettingsFile, &PfileSize);
+	INT64 fileSize = PfileSize.QuadPart;
 	LARGE_INTEGER move;
 	move.LowPart = 0;
 	move.HighPart = 0;
@@ -136,7 +137,7 @@ void readSettings()
 						}
 					}
 				}
-				setVariable(&value, k);
+				setVariable(value, k);
 				k++;
 			}
 		}
@@ -144,7 +145,7 @@ void readSettings()
 
 	for (int i = 0; i < 255; i++)
 	{
-		setColor((1 / (float)(255)) * i, &rgb);
+		setColor((1 / (float)(255)) * i, rgb);
 		barBrush[i] = CreateSolidBrush(RGB(rgb[0], rgb[1], rgb[2]));
 	}
 }
@@ -158,7 +159,7 @@ void writeSettings()
 
 	char str[1000];
 	float floatingpoint = 0.1f;
-	sprintf_s(str, 1000, ";%d;;%0.6ff;;%d;;%d;;%d;;%d;;&d;;%d", barCount, zoom, colorSel, border, background, gradient, ignoreSerial);
+	sprintf_s(str, 1000, ";%d;;%0.6ff;;%I64d;;%d;;%d;;%d;;&d;;%d", barCount, zoom, colorSel, border, background, gradient, ignoreSerial);
 	WriteFile(hSettingsFile, str, 1000, NULL, NULL);
 }
 
@@ -228,19 +229,19 @@ BOOL CALLBACK SettingsDlgProc(HWND hwnd, UINT Message, WPARAM wParam, LPARAM lPa
 			WS_CHILD | WS_VISIBLE | BS_AUTOCHECKBOX, 50, 140, 150, 15, hwnd, IDC_BUTTON_BORDER, NULL, NULL);
 
 		if (border)
-			SendMessageW(ButtonBorder, BM_SETCHECK, BST_CHECKED, NULL);
+			SendMessageW(ButtonBorder, BM_SETCHECK, BST_CHECKED, 0);
 
 		HWND ButtonBackground = CreateWindowW(L"Button", L"3D Background",
 			WS_CHILD | WS_VISIBLE | BS_AUTOCHECKBOX, 50, 160, 150, 15, hwnd, IDC_BUTTON_BACKGROUND, NULL, NULL);
 
 		if(background)
-			SendMessageW(ButtonBackground, BM_SETCHECK, BST_CHECKED, NULL);
+			SendMessageW(ButtonBackground, BM_SETCHECK, BST_CHECKED, 0);
 
 		HWND ButtonGradient = CreateWindowW(L"Button", L"Color Gradient",
 			WS_CHILD | WS_VISIBLE | BS_AUTOCHECKBOX, 50, 180, 150, 15, hwnd, IDC_BUTTON_GRADIENT, NULL, NULL);
 
 		if(gradient)
-			SendMessageW(ButtonGradient, BM_SETCHECK, BST_CHECKED, NULL);
+			SendMessageW(ButtonGradient, BM_SETCHECK, BST_CHECKED, 0);
 
 		HWND ButtonConnectSerial = CreateWindowW(L"Button", L"Connect Serial",
 			WS_CHILD | WS_VISIBLE, 50, 250, 100, 20, hwnd, IDC_BUTTON_CONNECTSERIAL, NULL, NULL);
@@ -249,7 +250,7 @@ BOOL CALLBACK SettingsDlgProc(HWND hwnd, UINT Message, WPARAM wParam, LPARAM lPa
 			WS_CHILD | WS_VISIBLE | BS_AUTOCHECKBOX, 50, 280, 100, 20, hwnd, IDC_BUTTON_IGNORESERIAL, NULL, NULL);
 
 		if (ignoreSerial)
-			SendMessageW(ButtonIgnoreSerial, BM_SETCHECK, BST_CHECKED, NULL);
+			SendMessageW(ButtonIgnoreSerial, BM_SETCHECK, BST_CHECKED, 0);
 
 		WCHAR strBarCount[4];
 		wsprintfW(strBarCount, L"%d", barCount);
@@ -321,27 +322,37 @@ BOOL CALLBACK SettingsDlgProc(HWND hwnd, UINT Message, WPARAM wParam, LPARAM lPa
 			case EN_CHANGE:
 			{
 				//Gets text from manual input of bars in Edit box
-				HWND hEdit = GetDlgItem(hwnd, (HMENU)8);
-				DWORD dwTextLength = GetWindowTextLength(hEdit);
+				//HWND hEdit = GetDlgItem(hwnd, (int)IDC_EDIT_BARCOUNT);
+				HWND hEdit = GetDlgItem(hwnd, 1008);
+				DWORD dwTextLength = GetWindowTextLengthA(hEdit);
 				if (dwTextLength > 0)
 				{
-					LPWSTR editText;
+					LPSTR editText;
 					DWORD dwBufferSize = dwTextLength + 1;
 
-					editText = (LPWSTR)GlobalAlloc(GPTR, dwBufferSize);
-					if (editText != NULL)
+					editText = (LPSTR)GlobalAlloc(GPTR, dwBufferSize);
+					if (editText)
 					{
-						if (GetWindowTextW(hEdit, editText, dwBufferSize));
+						if (GetWindowTextA(hEdit, editText, dwBufferSize));
 						{
 							int editbarcount;
-							if (StrToIntExW(editText, STIF_DEFAULT, &editbarcount))
+							if (StrToIntExA(editText, STIF_DEFAULT, &editbarcount))
 							{
-								if (editbarcount <= 1000)
+								if (editbarcount <= 500 && editbarcount >= 100)
 								{
 									SendMessageW(hBarcountSlider, TBM_SETPOS, TRUE, editbarcount);
 									barCount = editbarcount;
-									bar = (BARINFO*)realloc(bar, barCount * sizeof(BARINFO));
-									SendMessageW(globalhwnd, WM_SIZE, 0, 0);
+									BARINFO* tmp = (BARINFO*)realloc(bar, barCount * sizeof(BARINFO));
+									if (tmp)
+									{
+										bar = tmp;
+										SendMessageW(globalhwnd, WM_SIZE, 0, 0);
+									}
+									else
+									{
+										MessageBoxA(hwnd, "Failed to allocate memory for bar", "Warning", MB_OK);
+										SendMessageW(globalhwnd, WM_DESTROY, 0, 0);
+									}
 								}
 							}
 						}
@@ -371,8 +382,17 @@ BOOL CALLBACK SettingsDlgProc(HWND hwnd, UINT Message, WPARAM wParam, LPARAM lPa
 			break;
 		case IDCANCEL:
 			readSettings();
-			bar = (BARINFO*)realloc(bar, barCount * sizeof(BARINFO));
-			SendMessageW(globalhwnd, WM_SIZE, 0, 0);
+			BARINFO* tmp = (BARINFO*)realloc(bar, barCount * sizeof(BARINFO));
+			if (tmp)
+			{
+				bar = tmp;
+				SendMessageW(globalhwnd, WM_SIZE, 0, 0);
+			}
+			else
+			{
+				MessageBoxA(hwnd, "Failed to allocate memory for bar", "Warning", MB_OK);
+				SendMessageW(globalhwnd, WM_DESTROY, 0, 0);
+			}
 			DestroyWindow(SettingsDlg);
 			break;
 		case IDC_BUTTON_BORDER:
@@ -389,7 +409,7 @@ BOOL CALLBACK SettingsDlgProc(HWND hwnd, UINT Message, WPARAM wParam, LPARAM lPa
 			{
 			case CBN_SELCHANGE:
 			{
-				colorSel = SendMessage((HWND)lParam, (UINT)CB_GETCURSEL,
+				colorSel = SendMessageW((HWND)lParam, (UINT)CB_GETCURSEL,
 					(WPARAM)0, (LPARAM)0);
 
 				DeleteObject(barBrush);
@@ -408,8 +428,17 @@ BOOL CALLBACK SettingsDlgProc(HWND hwnd, UINT Message, WPARAM wParam, LPARAM lPa
 	{
 		LRESULT posBarcount = SendMessageW(hBarcountSlider, TBM_GETPOS, 0, 0);
 		barCount = posBarcount;
-		bar = (BARINFO*)realloc(bar, barCount * sizeof(BARINFO));
-		SendMessageW(globalhwnd, WM_SIZE, 0, 0);
+		BARINFO* tmp = (BARINFO*)realloc(bar, barCount * sizeof(BARINFO));
+		if (tmp)
+		{
+			bar = tmp;
+			SendMessageW(globalhwnd, WM_SIZE, 0, 0);
+		}
+		else
+		{
+			MessageBoxA(hwnd, "Failed to allocate memory for bar", "Warning", MB_OK);
+			SendMessageW(globalhwnd, WM_DESTROY, 0, 0);
+		}
 		WCHAR strBarCount[5];
 		wsprintfW(strBarCount, L"%d", barCount);
 		SetDlgItemTextW(hwnd, IDC_EDIT_BARCOUNT, strBarCount);
