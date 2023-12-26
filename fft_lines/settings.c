@@ -36,7 +36,7 @@ float zoom = 0.0001f;
 int colorSel = 0;
 
 int barCount = 500;
-BARINFO bar[1000];
+BARINFO* bar;
 
 HBRUSH barBrush[255];
 unsigned int rgb[3] = { 0,0,0 };
@@ -340,6 +340,7 @@ BOOL CALLBACK SettingsDlgProc(HWND hwnd, UINT Message, WPARAM wParam, LPARAM lPa
 								{
 									SendMessageW(hBarcountSlider, TBM_SETPOS, TRUE, editbarcount);
 									barCount = editbarcount;
+									bar = (BARINFO*)realloc(bar, barCount * sizeof(BARINFO));
 									SendMessageW(globalhwnd, WM_SIZE, 0, 0);
 								}
 							}
@@ -370,6 +371,8 @@ BOOL CALLBACK SettingsDlgProc(HWND hwnd, UINT Message, WPARAM wParam, LPARAM lPa
 			break;
 		case IDCANCEL:
 			readSettings();
+			bar = (BARINFO*)realloc(bar, barCount * sizeof(BARINFO));
+			SendMessageW(globalhwnd, WM_SIZE, 0, 0);
 			DestroyWindow(SettingsDlg);
 			break;
 		case IDC_BUTTON_BORDER:
@@ -405,6 +408,7 @@ BOOL CALLBACK SettingsDlgProc(HWND hwnd, UINT Message, WPARAM wParam, LPARAM lPa
 	{
 		LRESULT posBarcount = SendMessageW(hBarcountSlider, TBM_GETPOS, 0, 0);
 		barCount = posBarcount;
+		bar = (BARINFO*)realloc(bar, barCount * sizeof(BARINFO));
 		SendMessageW(globalhwnd, WM_SIZE, 0, 0);
 		WCHAR strBarCount[5];
 		wsprintfW(strBarCount, L"%d", barCount);

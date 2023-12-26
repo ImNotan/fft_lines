@@ -19,7 +19,7 @@ extern float zoom;
 extern int colorSel;
 
 extern int barCount;
-extern BARINFO bar[1000];
+extern BARINFO* bar;
 
 extern HBRUSH barBrush[255];
 extern unsigned int rgb[3];

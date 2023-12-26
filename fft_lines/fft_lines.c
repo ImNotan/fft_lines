@@ -3,6 +3,7 @@
 #include <fftw3.h>
 #include <stdint.h>
 #include <stdbool.h>
+#include <stdlib.h>
 #define _USE_MATH_DEFINES
 #include <math.h>
 
@@ -56,6 +57,8 @@ LRESULT CALLBACK WndProc(HWND hwnd, UINT msg, WPARAM wParam, LPARAM lParam)
 		initializeSettingsFile(hwnd);
 		readSettings();
 
+		bar = (BARINFO*)malloc(barCount * sizeof(BARINFO));
+
 		//Starts Recording Audio
 		initializeRecording();
 		startRecording();
@@ -86,23 +89,37 @@ LRESULT CALLBACK WndProc(HWND hwnd, UINT msg, WPARAM wParam, LPARAM lParam)
 					GetClientRect(hwnd, &rcClient);
 
 					//Calculates fourier transfor of audio data
-					fftwf_complex input[N];
-					fftwf_complex output[N];
+					fftwf_complex *input;
+					fftwf_complex *output;
 
-					for (int i = 0; i < N; i++)
+					input = (fftwf_complex*)malloc(N * sizeof(fftwf_complex));
+					output = (fftwf_complex*)malloc(N * sizeof(fftwf_complex));
+
+					if (input && output)
 					{
-						input[i][REAL] = (float)largeBuffer[i];
-						input[i][IMAG] = 0;
+						for (int i = 0; i < N; i++)
+						{
+							input[i][REAL] = (float)largeBuffer[i];
+							input[i][IMAG] = 0;
+						}
+
+						fft(input, output);
+
+						//Sets the height of the bars calculated by fourier transfor
+						for (int i = 0; i < barCount; i++)
+						{
+							bar[i].height = (int)(sqrt(pow(output[i][REAL], 2) + pow(output[i][IMAG], 2)) * zoom);
+							//multiplies it by function to lower low frequncies and boost high frequencies
+							bar[i].height *= sqrt((float)i + 1);
+						}
+
+						free(input);
+						free(output);
 					}
-
-					fft(&input, &output);
-
-					//Sets the height of the bars calculated by fourier transfor
-					for (int i = 0; i < barCount; i++)
+					else
 					{
-						bar[i].height = (int)(sqrt(pow(output[i][REAL], 2) + pow(output[i][IMAG], 2)) * zoom);
-						//multiplies it by function to lower low frequncies and boost high frequencies
-						bar[i].height *= sqrt((float)i + 1);
+						MessageBoxA(hwnd, "Failed to allocate memory for input", "Warning", MB_OK);
+						SendMessageW(hwnd, WM_DESTROY, NULL, NULL);
 					}
 
 					//smoothing
@@ -210,6 +227,7 @@ LRESULT CALLBACK WndProc(HWND hwnd, UINT msg, WPARAM wParam, LPARAM lParam)
 		DestroyWindow(hwnd);
 		break;
 	case WM_DESTROY:
+		free(bar);
 		writeSettings();
 		uninitializeRecording();
 		DeleteObject(barBrush);
