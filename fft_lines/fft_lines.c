@@ -22,6 +22,7 @@ void uninitializeRecording();
 HRESULT GetAudioBuffer(int16_t* buffer, BOOL* bdone);
 HRESULT startRecording();
 void Exit();
+void getWaveFormat(WAVEFORMATEX* waveformat);
 
 const char g_szClassName[] = "myWindowClass";
 
@@ -82,12 +83,6 @@ LRESULT CALLBACK WndProc(HWND hwnd, UINT msg, WPARAM wParam, LPARAM lParam)
 
 				if (bdone)
 				{
-					RECT rcClient;
-					HDC hdc = GetDC(hwnd);
-
-					//Get size of User Window
-					GetClientRect(hwnd, &rcClient);
-
 					//Calculates fourier transfor of audio data
 					fftwf_complex *input;
 					fftwf_complex *output;
@@ -125,9 +120,7 @@ LRESULT CALLBACK WndProc(HWND hwnd, UINT msg, WPARAM wParam, LPARAM lParam)
 					//smoothing
 					SGS_smothing();
 
-					DrawBar(hdc, &rcClient);
-
-					ReleaseDC(hwnd, hdc);
+					DrawBar();
 				}
 				break;
 			}
@@ -176,42 +169,57 @@ LRESULT CALLBACK WndProc(HWND hwnd, UINT msg, WPARAM wParam, LPARAM lParam)
 	case WM_SIZE:
 	{
 		HDC hdc = GetDC(hwnd);
-		RECT clientRect;
+		RECT windowRect;
 
-		GetClientRect(hwnd, &clientRect);
+		GetClientRect(hwnd, &windowRect);
 		//adjusts the window size for the bottomBar in which the frequencies are displayed
-		clientRect.top = clientRect.bottom - bottomBarHeihgt;
+		windowRect.top = windowRect.bottom - bottomBarHeihgt;
 
-		HGDIOBJ  original = NULL;
-		original = SelectObject(hdc, GetStockObject(DC_BRUSH));
-
-		SetDCBrushColor(hdc, RGB(50, 50, 50));
 
 		//sets background to gray
-		FillRect(hdc, &clientRect, GetStockObject(DKGRAY_BRUSH));
+		FillRect(hdc, &windowRect, GetStockObject(DKGRAY_BRUSH));
+
+		SetBkMode(hdc, TRANSPARENT);
+		SetTextColor(hdc, RGB(255, 255, 255));
+		RECT textRect;
+		WAVEFORMATEX wfx;
+		getWaveFormat(&wfx);
+
+		for (int i = 0; i < 10; i++)
+		{
+			textRect.top = windowRect.bottom;
+			textRect.bottom = windowRect.bottom - bottomBarHeihgt;
+			textRect.left = i * (windowRect.right / 10);
+			textRect.right = i * (windowRect.right / 10) + (windowRect.right / 10);
+
+			//Gets frequencies from audio function
+			int freq = (i * (barCount / 10) + (barCount / 20)) * (wfx.nSamplesPerSec / N);
+			wchar_t buffer[11];
+			wsprintfW(buffer, L"%dHz ", freq);
+
+			DrawText(hdc, buffer, 7, &textRect, DT_CENTER | DT_VCENTER | DT_SINGLELINE);
+		}
 
 		//set new size of bars
 		if (barCount > 0)
 		{
 			for (int i = 0; i < barCount; i++)
 			{
-				bar[i].width = (unsigned int)((clientRect.right / barCount) + 1);
+				bar[i].width = (unsigned int)((windowRect.right / barCount) + 1);
 				bar[i].x = i * (bar[i].width - 1);
 			}
 
-			for (int i = 0; i < clientRect.right % barCount; i++)
+			for (int i = 0; i < windowRect.right % barCount; i++)
 			{
 				bar[i].width += 2;
 				bar[i].x += i;
 			}
 
-			for (int i = clientRect.right % barCount; i < barCount; i++)
+			for (int i = windowRect.right % barCount; i < barCount; i++)
 			{
-				bar[i].x += clientRect.right % barCount;
+				bar[i].x += windowRect.right % barCount;
 			}
 		}
-
-		SelectObject(hdc, original);
 
 		ReleaseDC(hwnd, hdc);
 	}

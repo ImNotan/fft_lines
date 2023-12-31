@@ -11,12 +11,6 @@
 
 #include "sgfilter.h"
 
-
-//#define N 1024
-
-//define .cpp functions
-void getWaveFormat(WAVEFORMATEX* waveformat);
-
 void SGS_smothing()
 {
 	int nl = 6;  //DEFAULT_NL;
@@ -46,7 +40,7 @@ void SGS_smothing()
 	free_dvector(yf, 1, mm);
 }
 
-void DrawBar(HDC hdc, RECT* prc)
+void DrawBar()
 {
 	//writes height of one bar to serial if activated
 	if (bar[led_bar].height >= 0 && doSerial)
@@ -56,21 +50,27 @@ void DrawBar(HDC hdc, RECT* prc)
 		WriteSerial(line, globalhwnd);
 	}
 
+	RECT windowRect;
+	HDC hdc = GetDC(globalhwnd);
+
+	//Get size of User Window
+	GetClientRect(globalhwnd, &windowRect);
+
 	HDC hdcBuffer = CreateCompatibleDC(hdc);
-	HBITMAP hbmBuffer = CreateCompatibleBitmap(hdc, prc->right, prc->bottom);
+	HBITMAP hbmBuffer = CreateCompatibleBitmap(hdc, windowRect.right, windowRect.bottom);
 	HBITMAP hbmOldBuffer = SelectObject(hdcBuffer, hbmBuffer);
 
 	//Sets the background to dark gray if background effect is deactivated
 	if(!background)
-		FillRect(hdcBuffer, prc, GetStockObject(DKGRAY_BRUSH));
+		FillRect(hdcBuffer, &windowRect, GetStockObject(DKGRAY_BRUSH));
 
 	//adjusts the window size for the bottomBar in which the frequencies are displayed
-	prc->bottom -= bottomBarHeihgt;
+	windowRect.bottom -= bottomBarHeihgt;
 
 	//Creates the Background effect by copying the last frame to the new frame and moving it 5 to the right and 5 up
 	//after which the new bars are drawn on top of it
 	if(background)
-		BitBlt(hdcBuffer, 0, 0, prc->right , prc->bottom - 5, hdc, -5, 5, SRCCOPY);
+		BitBlt(hdcBuffer, 0, 0, windowRect.right, windowRect.bottom - 5, hdc, -5, 5, SRCCOPY);
 
 
 	TRIVERTEX vertex[2];
@@ -82,14 +82,14 @@ void DrawBar(HDC hdc, RECT* prc)
 		{
 			setColor(1 / (float)(255) * (float)((((float)i / ((float)barCount - 1.0))) * 254.0), rgb);
 			vertex[0].x = bar[i].x;
-			vertex[0].y = prc->bottom - bar[i].height;
+			vertex[0].y = windowRect.bottom - bar[i].height;
 			vertex[0].Red = rgb[0] * 256;
 			vertex[0].Green = rgb[1] * 256;
 			vertex[0].Blue = rgb[2] * 256;
 			vertex[0].Alpha = 0x0000;
 
 			vertex[1].x = bar[i].x + bar[i].width;
-			vertex[1].y = prc->bottom;
+			vertex[1].y = windowRect.bottom;
 			vertex[1].Red = (COLOR16)((float)vertex[0].Red * 0.5f);
 			vertex[1].Green = (COLOR16)((float)vertex[0].Green * 0.5f);
 			vertex[1].Blue = (COLOR16)((float)vertex[0].Blue * 0.5f);
@@ -103,44 +103,30 @@ void DrawBar(HDC hdc, RECT* prc)
 		}
 
 		//Calculates the bar size for use in border mode or no gradient mode
-		barRect.left = bar[i].x;
-		barRect.right = bar[i].x + bar[i].width;
-		barRect.top = prc->bottom - bar[i].height;
-		barRect.bottom = prc->bottom;
 
-		if(!gradient)
-			FillRect(hdcBuffer, &barRect, barBrush[(unsigned int)((float)(((float)i / ((float)barCount - 1.0)) * 254.0))]);
+		if (!gradient || border)
+		{
+			barRect.left = bar[i].x;
+			barRect.right = bar[i].x + bar[i].width;
+			barRect.top = windowRect.bottom - bar[i].height;
+			barRect.bottom = windowRect.bottom;
 
-		if (border)
-			FrameRect(hdcBuffer, &barRect, GetStockObject(DKGRAY_BRUSH));
-	}
+			if (!gradient)
+				FillRect(hdcBuffer, &barRect, barBrush[(unsigned int)((float)(((float)i / ((float)barCount - 1.0)) * 254.0))]);
 
-	//show freq at bottom
-	SetBkMode(hdc, TRANSPARENT);
-	SetTextColor(hdc, RGB(255,255,255));
-	RECT textRect;
-	WAVEFORMATEX wfx;
-	getWaveFormat(&wfx);
 
-	for (int i = 0; i < 10; i++)
-	{
-		textRect.top = prc->bottom;
-		textRect.bottom = prc->bottom + bottomBarHeihgt;
-		textRect.left = i * (prc->right / 10);
-		textRect.right = i * (prc->right / 10) + (prc->right / 10);
 
-		//Gets frequencies from audio function
-		int freq = (i * (barCount / 10) + (barCount / 20)) * (wfx.nSamplesPerSec / N);
-		wchar_t buffer[11];
-		wsprintfW(buffer, L"%dHz ", freq);
-
-		DrawText(hdc, buffer, 7, &textRect, DT_CENTER | DT_VCENTER | DT_SINGLELINE);
+			if (border)
+				FrameRect(hdcBuffer, &barRect, GetStockObject(DKGRAY_BRUSH));
+		}	
 	}
 
 	//copys buffer to window
-	BitBlt(hdc, 0, 0, prc->right, prc->bottom, hdcBuffer, 0, 0, SRCCOPY);
+	BitBlt(hdc, 0, 0, windowRect.right, windowRect.bottom, hdcBuffer, 0, 0, SRCCOPY);
 
 	SelectObject(hdcBuffer, hbmOldBuffer);
+	DeleteObject(hbmOldBuffer);
 	DeleteDC(hdcBuffer);
 	DeleteObject(hbmBuffer);
+	ReleaseDC(globalhwnd, hdc);
 }
