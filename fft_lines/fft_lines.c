@@ -24,6 +24,10 @@ HRESULT startRecording();
 void Exit();
 void getWaveFormat(WAVEFORMATEX* waveformat);
 
+HRESULT CreateGraphicsResources();
+void DiscardGraphicsResources();
+
+
 const char g_szClassName[] = "myWindowClass";
 
 //Initialize global handle for use in whole document
@@ -41,6 +45,11 @@ LRESULT CALLBACK WndProc(HWND hwnd, UINT msg, WPARAM wParam, LPARAM lParam)
 	{
 	case WM_CREATE:
 	{
+		HRESULT hr = CreateGraphicsResources();
+		if (!SUCCEEDED(hr))
+		{
+			MessageBoxA(hwnd, "Graphics Error", "Error", MB_OK);
+		}
 		//Defines Colors for the Bars
 		for (int i = 0; i < 255; i++)
 		{
@@ -235,6 +244,7 @@ LRESULT CALLBACK WndProc(HWND hwnd, UINT msg, WPARAM wParam, LPARAM lParam)
 		DestroyWindow(hwnd);
 		break;
 	case WM_DESTROY:
+		DiscardGraphicsResources();
 		free(bar);
 		writeSettings();
 		uninitializeRecording();

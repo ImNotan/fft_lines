@@ -151,6 +151,7 @@
     <ClCompile Include="drawbar.c" />
     <ClCompile Include="fft_calculate.c" />
     <ClCompile Include="fft_lines.c" />
+    <ClCompile Include="graphicsBar.cpp" />
     <ClCompile Include="serial.c" />
     <ClCompile Include="settings.c" />
     <ClCompile Include="sgfilter.c" />

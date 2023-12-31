@@ -10,10 +10,6 @@
 
 using namespace std;
 
-#pragma comment(lib, "Winmm.lib")
-
-//#define N 1024
-
 BOOL bDone = FALSE;
 HMMIO hFile = NULL;
 
