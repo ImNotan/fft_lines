@@ -2,6 +2,7 @@
 #include <fftw3.h>
 #define _USE_MATH_DEFINES
 #include <math.h>
+#include <process.h>
 
 #include "settings.h"
 #include "global.h"
@@ -10,6 +11,11 @@
 #include "drawbar.h"
 
 #include "sgfilter.h"
+
+RECT barWindowRect[2];
+
+HANDLE hThreads[2] = { NULL };
+int threadNr = 0;
 
 void SGS_smothing()
 {
@@ -40,56 +46,61 @@ void SGS_smothing()
 	free_dvector(yf, 1, mm);
 }
 
-void DrawBar()
+void BarProc(void* pMyID)
 {
-	//writes height of one bar to serial if activated
-	if (bar[led_bar].height >= 0 && doSerial)
-	{
-		char line[1];
-		line[0] = (char)((float)bar[led_bar].height * 0.1f);
-		WriteSerial(line, globalhwnd);
-	}
+	int MyID = (int)(uintptr_t)pMyID;
 
-	RECT windowRect;
 	HDC hdc = GetDC(globalhwnd);
 
-	//Get size of User Window
-	GetClientRect(globalhwnd, &windowRect);
-
 	HDC hdcBuffer = CreateCompatibleDC(hdc);
-	HBITMAP hbmBuffer = CreateCompatibleBitmap(hdc, windowRect.right, windowRect.bottom);
+	HBITMAP hbmBuffer = CreateCompatibleBitmap(hdc, barWindowRect[MyID].right, barWindowRect[MyID].bottom);
 	HBITMAP hbmOldBuffer = SelectObject(hdcBuffer, hbmBuffer);
 
-	//Sets the background to dark gray if background effect is deactivated
-	if(!background)
-		FillRect(hdcBuffer, &windowRect, GetStockObject(DKGRAY_BRUSH));
+	if (!background)
+		FillRect(hdcBuffer, &barWindowRect[MyID], GetStockObject(DKGRAY_BRUSH));
 
 	//adjusts the window size for the bottomBar in which the frequencies are displayed
-	windowRect.bottom -= bottomBarHeihgt;
+	//barWindowRect[MyID].bottom -= bottomBarHeihgt;
 
 	//Creates the Background effect by copying the last frame to the new frame and moving it 5 to the right and 5 up
 	//after which the new bars are drawn on top of it
-	if(background)
-		BitBlt(hdcBuffer, 0, 0, windowRect.right, windowRect.bottom - 5, hdc, -5, 5, SRCCOPY);
+	if (background)
+		BitBlt(hdcBuffer, 0, 0, barWindowRect[MyID].right, barWindowRect[MyID].bottom - 5 - bottomBarHeihgt, hdc, -5, 5, SRCCOPY);
 
 
 	TRIVERTEX vertex[2];
 	RECT barRect;
-	for (int i = 0; i < barCount; i++)
+	int localBarCount = 0;
+	int startBar;
+	if (MyID == 0)
+	{
+		startBar = 0;
+		localBarCount = barCount / 2;
+	}
+	else
+	{
+		if ((barCount % 2) != 0)
+			startBar = (barCount / 2) - 1;
+		else
+			startBar = barCount / 2;
+
+		localBarCount = barCount;
+	}
+	for (int i = startBar; i < localBarCount; i++)
 	{
 		//makes the bottom of the bar darker for a 3d effect
 		if (gradient)
 		{
 			setColor(1 / (float)(255) * (float)((((float)i / ((float)barCount - 1.0))) * 254.0), rgb);
 			vertex[0].x = bar[i].x;
-			vertex[0].y = windowRect.bottom - bar[i].height;
+			vertex[0].y = barWindowRect[MyID].bottom - bar[i].height - bottomBarHeihgt;
 			vertex[0].Red = rgb[0] * 256;
 			vertex[0].Green = rgb[1] * 256;
 			vertex[0].Blue = rgb[2] * 256;
 			vertex[0].Alpha = 0x0000;
 
 			vertex[1].x = bar[i].x + bar[i].width;
-			vertex[1].y = windowRect.bottom;
+			vertex[1].y = barWindowRect[MyID].bottom - bottomBarHeihgt;
 			vertex[1].Red = (COLOR16)((float)vertex[0].Red * 0.5f);
 			vertex[1].Green = (COLOR16)((float)vertex[0].Green * 0.5f);
 			vertex[1].Blue = (COLOR16)((float)vertex[0].Blue * 0.5f);
@@ -108,8 +119,8 @@ void DrawBar()
 		{
 			barRect.left = bar[i].x;
 			barRect.right = bar[i].x + bar[i].width;
-			barRect.top = windowRect.bottom - bar[i].height;
-			barRect.bottom = windowRect.bottom;
+			barRect.top = barWindowRect[MyID].bottom - bar[i].height - bottomBarHeihgt;
+			barRect.bottom = barWindowRect[MyID].bottom - bottomBarHeihgt;
 
 			if (!gradient)
 				FillRect(hdcBuffer, &barRect, barBrush[(unsigned int)((float)(((float)i / ((float)barCount - 1.0)) * 254.0))]);
@@ -118,15 +129,35 @@ void DrawBar()
 
 			if (border)
 				FrameRect(hdcBuffer, &barRect, GetStockObject(DKGRAY_BRUSH));
-		}	
+		}
 	}
 
 	//copys buffer to window
-	BitBlt(hdc, 0, 0, windowRect.right, windowRect.bottom, hdcBuffer, 0, 0, SRCCOPY);
+	BitBlt(hdc, 0, 0, barWindowRect[MyID].right, barWindowRect[MyID].bottom - bottomBarHeihgt, hdcBuffer, 0, 0, SRCCOPY);
 
 	SelectObject(hdcBuffer, hbmOldBuffer);
 	DeleteObject(hbmOldBuffer);
 	DeleteDC(hdcBuffer);
 	DeleteObject(hbmBuffer);
 	ReleaseDC(globalhwnd, hdc);
+}
+
+void DrawBar()
+{
+	//writes height of one bar to serial if activated
+	if (bar[led_bar].height >= 0 && doSerial)
+	{
+		char line[1];
+		line[0] = (char)((float)bar[led_bar].height * 0.1f);
+		WriteSerial(line, globalhwnd);
+	}
+
+	threadNr = 0;
+	hThreads[threadNr] = (HANDLE)_beginthread(BarProc, 0, (void*)(uintptr_t)threadNr);
+	threadNr = 1;
+	hThreads[threadNr] = (HANDLE)_beginthread(BarProc, 0, (void*)(uintptr_t)threadNr);
+
+	//WaitForMultipleObjects(2, *hThreads, TRUE, INFINITE);
+	WaitForSingleObject(hThreads[0], INFINITE);
+	WaitForSingleObject(hThreads[1], INFINITE);
 }

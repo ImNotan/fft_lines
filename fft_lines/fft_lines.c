@@ -175,6 +175,15 @@ LRESULT CALLBACK WndProc(HWND hwnd, UINT msg, WPARAM wParam, LPARAM lParam)
 		//adjusts the window size for the bottomBar in which the frequencies are displayed
 		windowRect.top = windowRect.bottom - bottomBarHeihgt;
 
+		barWindowRect[0].left = windowRect.left;
+		barWindowRect[0].right = windowRect.right / 2;
+		barWindowRect[0].top = windowRect.top;
+		barWindowRect[0].bottom = windowRect.bottom;
+
+		barWindowRect[1].left = barWindowRect[0].right;
+		barWindowRect[1].right = windowRect.right;
+		barWindowRect[1].top = windowRect.top;
+		barWindowRect[1].bottom = windowRect.bottom;
 
 		//sets background to gray
 		FillRect(hdc, &windowRect, GetStockObject(DKGRAY_BRUSH));
