@@ -54,6 +54,7 @@ BOOL CALLBACK DeviceSelProc(HWND hwnd, UINT Message, WPARAM wParam, LPARAM lPara
 			//Change audio device
 			stopRecording();
 			unsigned int deviceSelected = SendMessageW(GetDlgItem(hwnd, IDC_LIST1), LB_GETCURSEL, 0, 0);
+			ChangeAudioStream(deviceSelected);
 			startRecording();
 			break;
 		}
