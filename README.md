@@ -12,7 +12,7 @@ This Windows application allows users to visualize the Fast Fourier Transform (F
     -  window size
     -  color Gradients
     -  3D-mode
-- Additional serial output for led-strip
+- Additional serial output for led-strip [Arduino Code](https://github.com/ImNotan/fft_lines_arduino)
 
 ## Screenshots
 
