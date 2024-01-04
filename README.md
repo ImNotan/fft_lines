@@ -22,7 +22,14 @@ This Windows application allows users to visualize the Fast Fourier Transform (F
 ![fft_lines2](https://github.com/ImNotan/fft_lines/assets/66617967/b32c7eab-31f9-43f4-a829-b15fa971294f)
 *Main application window with FFT visualization. And 2D-barmode*
 
+## Video
+[![fft lines](https://img.youtube.com/vi/kxXr2HNGEww/0.jpg)](https://www.youtube.com/watch?v=kxXr2HNGEww)
+
+*Music used: Englishman in New York*
+
 ## Installation
+
+May be flagged by Anti-Virus because I don't have a code signing certificate
 
 1. Download the latest release from the [Releases](https://github.com/ImNotan/fft_lines/releases) page.
 2. Run fft_lines_setup.msi.
