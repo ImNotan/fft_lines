@@ -163,44 +163,44 @@ void writeSettings()
 	WriteFile(hSettingsFile, str, 1000, NULL, NULL);
 }
 
-void setColor(float floatBetweenZeroAndOne, int* rgb)
+void setColor(unsigned int floatBetweenZeroAndOne, int* rgb)
 {
 	switch (colorSel)
 	{
 	case 0:
-		rgb[0] = (unsigned int)(plasma[(unsigned int)(floatBetweenZeroAndOne * 255)][0] * 255);
-		rgb[1] = (unsigned int)(plasma[(unsigned int)(floatBetweenZeroAndOne * 255)][1] * 255);
-		rgb[2] = (unsigned int)(plasma[(unsigned int)(floatBetweenZeroAndOne * 255)][2] * 255);
+		rgb[0] = (unsigned int)(plasma[(unsigned int)(floatBetweenZeroAndOne)][0] * 255);
+		rgb[1] = (unsigned int)(plasma[(unsigned int)(floatBetweenZeroAndOne)][1] * 255);
+		rgb[2] = (unsigned int)(plasma[(unsigned int)(floatBetweenZeroAndOne)][2] * 255);
 		break;
 	case 1:
-		rgb[0] = (unsigned int)(magma[(unsigned int)(floatBetweenZeroAndOne * 255)][0] * 255);
-		rgb[1] = (unsigned int)(magma[(unsigned int)(floatBetweenZeroAndOne * 255)][1] * 255);
-		rgb[2] = (unsigned int)(magma[(unsigned int)(floatBetweenZeroAndOne * 255)][2] * 255);
+		rgb[0] = (unsigned int)(magma[(unsigned int)(floatBetweenZeroAndOne)][0] * 255);
+		rgb[1] = (unsigned int)(magma[(unsigned int)(floatBetweenZeroAndOne)][1] * 255);
+		rgb[2] = (unsigned int)(magma[(unsigned int)(floatBetweenZeroAndOne)][2] * 255);
 		break;
 	case 2:
-		rgb[0] = (unsigned int)(inferno[(unsigned int)(floatBetweenZeroAndOne * 255)][0] * 255);
-		rgb[1] = (unsigned int)(inferno[(unsigned int)(floatBetweenZeroAndOne * 255)][1] * 255);
-		rgb[2] = (unsigned int)(inferno[(unsigned int)(floatBetweenZeroAndOne * 255)][2] * 255);
+		rgb[0] = (unsigned int)(inferno[(unsigned int)(floatBetweenZeroAndOne)][0] * 255);
+		rgb[1] = (unsigned int)(inferno[(unsigned int)(floatBetweenZeroAndOne)][1] * 255);
+		rgb[2] = (unsigned int)(inferno[(unsigned int)(floatBetweenZeroAndOne)][2] * 255);
 		break;
 	case 3:
-		rgb[0] = (unsigned int)(viridis[(unsigned int)(floatBetweenZeroAndOne * 255)][0] * 255);
-		rgb[1] = (unsigned int)(viridis[(unsigned int)(floatBetweenZeroAndOne * 255)][1] * 255);
-		rgb[2] = (unsigned int)(viridis[(unsigned int)(floatBetweenZeroAndOne * 255)][2] * 255);
+		rgb[0] = (unsigned int)(viridis[(unsigned int)(floatBetweenZeroAndOne)][0] * 255);
+		rgb[1] = (unsigned int)(viridis[(unsigned int)(floatBetweenZeroAndOne)][1] * 255);
+		rgb[2] = (unsigned int)(viridis[(unsigned int)(floatBetweenZeroAndOne)][2] * 255);
 		break;
 	case 4:
-		rgb[0] = (unsigned int)(cividis[(unsigned int)(floatBetweenZeroAndOne * 255)][0] * 255);
-		rgb[1] = (unsigned int)(cividis[(unsigned int)(floatBetweenZeroAndOne * 255)][1] * 255);
-		rgb[2] = (unsigned int)(cividis[(unsigned int)(floatBetweenZeroAndOne * 255)][2] * 255);
+		rgb[0] = (unsigned int)(cividis[(unsigned int)(floatBetweenZeroAndOne)][0] * 255);
+		rgb[1] = (unsigned int)(cividis[(unsigned int)(floatBetweenZeroAndOne)][1] * 255);
+		rgb[2] = (unsigned int)(cividis[(unsigned int)(floatBetweenZeroAndOne)][2] * 255);
 		break;
 	case 5:
-		rgb[0] = (unsigned int)(twilight[(unsigned int)(floatBetweenZeroAndOne * 255 * 2)][0] * 255);
-		rgb[1] = (unsigned int)(twilight[(unsigned int)(floatBetweenZeroAndOne * 255 * 2)][1] * 255);
-		rgb[2] = (unsigned int)(twilight[(unsigned int)(floatBetweenZeroAndOne * 255 * 2)][2] * 255);
+		rgb[0] = (unsigned int)(twilight[(unsigned int)(floatBetweenZeroAndOne * 2)][0] * 255);
+		rgb[1] = (unsigned int)(twilight[(unsigned int)(floatBetweenZeroAndOne * 2)][1] * 255);
+		rgb[2] = (unsigned int)(twilight[(unsigned int)(floatBetweenZeroAndOne * 2)][2] * 255);
 		break;
 	case 6:
-		rgb[0] = (unsigned int)(turbo[(unsigned int)(floatBetweenZeroAndOne * 255)][0] * 255);
-		rgb[1] = (unsigned int)(turbo[(unsigned int)(floatBetweenZeroAndOne * 255)][1] * 255);
-		rgb[2] = (unsigned int)(turbo[(unsigned int)(floatBetweenZeroAndOne * 255)][2] * 255);
+		rgb[0] = (unsigned int)(turbo[(unsigned int)(floatBetweenZeroAndOne)][0] * 255);
+		rgb[1] = (unsigned int)(turbo[(unsigned int)(floatBetweenZeroAndOne)][1] * 255);
+		rgb[2] = (unsigned int)(turbo[(unsigned int)(floatBetweenZeroAndOne)][2] * 255);
 		break;
 
 	}

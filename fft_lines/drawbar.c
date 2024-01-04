@@ -95,7 +95,7 @@ void DrawBar()
 		//makes the bottom of the bar darker for a 3d effect
 		if (gradient)
 		{
-			setColor(1 / (float)(255) * (float)((((float)i / ((float)barCount - 1.0))) * 254.0), rgb);
+			setColor((unsigned int)((((float)i / ((float)barCount - 1.0))) * 254.0), rgb);
 			vertex[0].x = bar[i].x;
 			vertex[0].y = windowRect.bottom - bar[i].height;
 			vertex[0].Red = rgb[0] * 256;
