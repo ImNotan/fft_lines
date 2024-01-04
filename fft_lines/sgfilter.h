@@ -35,6 +35,8 @@ char convlv(double data[], unsigned long n, double respns[], unsigned long m,
 char sgcoeff(double c[], int np, int nl, int nr, int ld, int m);
 char sgfilter(double yr[], double yf[], int mm, int nl, int nr, int ld, int m);
 char* strip_away_path(char filename[]);
-long int num_coordinate_pairs(FILE* file);
+//long int num_coordinate_pairs(FILE* file);
 
 /*:12*/
+
+extern void SGS_smothing();

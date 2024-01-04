@@ -145,7 +145,7 @@ void readSettings()
 
 	for (int i = 0; i < 255; i++)
 	{
-		setColor((1 / (float)(255)) * i, rgb);
+		setColor(i, rgb);
 		barBrush[i] = CreateSolidBrush(RGB(rgb[0], rgb[1], rgb[2]));
 	}
 }
@@ -416,7 +416,7 @@ BOOL CALLBACK SettingsDlgProc(HWND hwnd, UINT Message, WPARAM wParam, LPARAM lPa
 
 				for (int i = 0; i < 255; i++)
 				{
-					setColor((1 / (float)(255)) * i, &rgb);
+					setColor(i, &rgb);
 					barBrush[i] = CreateSolidBrush(RGB(rgb[0], rgb[1], rgb[2]));
 				}
 			}

@@ -5,11 +5,40 @@
 #include <string.h>
 #include <ctype.h>
 #include <time.h>
+
 #include "sgfilter.h"
+#include "settings.h"
 
+void SGS_smothing()
+{
+    int nl = 6;  //DEFAULT_NL;
+    int nr = 6;  //DEFAULT_NR;
+    int ld = DEFAULT_LD;
+    int m = 8;
+    long int k = 0;
+    long int mm = barCount;
+    double* yr, * yf;
 
-extern char* optarg;
-char* progname;
+    yr = dvector(1, mm);
+    yf = dvector(1, mm);
+
+    for (k = 1; k <= mm; k++)
+    {
+        yr[k] = (double)bar[k - 1].height;
+    }
+
+    sgfilter(yr, yf, mm, nl, nr, ld, m);
+
+    for (k = 1; k <= mm; k++)
+    {
+        bar[k - 1].height = (int)yf[k];
+    }
+
+    free_dvector(yr, 1, mm);
+    free_dvector(yf, 1, mm);
+}
+
+//from https://github.com/thatchristoph/vmd-cvs-github/blob/master/plugins/signalproc/src/sgsmooth.C
 
 int* ivector(long nl, long nh)
 {

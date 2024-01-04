@@ -15,6 +15,7 @@
 #include "drawbar.h"
 #include "DeviceSel.h"
 #include "showerror.h"
+#include "sgfilter.h"
 
 //Define .cpp functions for audio recording with WASAPI
 HRESULT initializeRecording();
@@ -29,9 +30,10 @@ const char g_szClassName[] = "myWindowClass";
 //Initialize global handle for use in whole document
 HWND globalhwnd;
 
-
+//Defines a Timer ID
 #define ID_TIMER_UPDATE 1
 
+//Audio Buffer
 int16_t largeBuffer[2048];
 
 
@@ -41,13 +43,6 @@ LRESULT CALLBACK WndProc(HWND hwnd, UINT msg, WPARAM wParam, LPARAM lParam)
 	{
 	case WM_CREATE:
 	{
-		//Defines Colors for the Bars
-		for (int i = 0; i < 255; i++)
-		{
-			setColor((1 / (float)(255)) * i, &rgb);
-			barBrush[i] = CreateSolidBrush(RGB(rgb[0], rgb[1], rgb[2]));
-		}
-
 		//Look if User wants Serial and if it is connected
 		if (ignoreSerial)
 			doSerial = false;
@@ -58,6 +53,7 @@ LRESULT CALLBACK WndProc(HWND hwnd, UINT msg, WPARAM wParam, LPARAM lParam)
 		initializeSettingsFile(hwnd);
 		readSettings();
 
+		//the bar array saves data about every bar
 		bar = (BARINFO*)malloc(barCount * sizeof(BARINFO));
 
 		//Starts Recording Audio
@@ -103,7 +99,9 @@ LRESULT CALLBACK WndProc(HWND hwnd, UINT msg, WPARAM wParam, LPARAM lParam)
 						//Sets the height of the bars calculated by fourier transfor
 						for (int i = 0; i < barCount; i++)
 						{
+							//Calculates distance to origin with Pythagoras in complex plane
 							bar[i].height = (int)(sqrt(pow(output[i][REAL], 2) + pow(output[i][IMAG], 2)) * zoom);
+
 							//multiplies it by function to lower low frequncies and boost high frequencies
 							bar[i].height *= sqrt((float)i + 1);
 						}
@@ -117,9 +115,18 @@ LRESULT CALLBACK WndProc(HWND hwnd, UINT msg, WPARAM wParam, LPARAM lParam)
 						SendMessageW(hwnd, WM_DESTROY, NULL, NULL);
 					}
 
-					//smoothing
+					//smoothing with Savitzky-Golay
 					SGS_smothing();
 
+					//Prints to serial
+					if (bar[led_bar].height >= 0 && doSerial)
+					{
+						char line[1];
+						line[0] = (char)((float)bar[led_bar].height * 0.1f);
+						WriteSerial(line, globalhwnd);
+					}
+
+					//Draws bars on screen
 					DrawBar();
 				}
 				break;
@@ -131,7 +138,7 @@ LRESULT CALLBACK WndProc(HWND hwnd, UINT msg, WPARAM wParam, LPARAM lParam)
 	case WM_COMMAND:
 		switch (LOWORD(wParam))
 		{
-			//Creates settings dialouges from top bar
+			//Creates settings dialog
 			case ID_SETTINGS_SETTINGS:
 			{
 				DestroyWindow(SettingsDlg);
@@ -148,6 +155,7 @@ LRESULT CALLBACK WndProc(HWND hwnd, UINT msg, WPARAM wParam, LPARAM lParam)
 				}
 			}
 			break;
+			//Creates Device select dialog
 			case ID_SETTINGS_DEVICES:
 			{
 				DestroyWindow(DeviceSelDlg);
@@ -170,24 +178,28 @@ LRESULT CALLBACK WndProc(HWND hwnd, UINT msg, WPARAM wParam, LPARAM lParam)
 	{
 		HDC hdc = GetDC(hwnd);
 
+		DeleteDC(globalhdcBuffer);
+		ReleaseDC(hwnd, globalhdc);
 		globalhdc = GetDC(hwnd);
 		globalhdcBuffer = CreateCompatibleDC(globalhdc);
 
 		RECT windowRect;
 
 		GetClientRect(hwnd, &windowRect);
+
 		//adjusts the window size for the bottomBar in which the frequencies are displayed
 		windowRect.top = windowRect.bottom - bottomBarHeihgt;
 
 		globalhbmBuffer = CreateCompatibleBitmap(globalhdc, windowRect.right, windowRect.bottom);
 
-		//sets background to gray
+		//sets bottombar to gray
 		FillRect(hdc, &windowRect, GetStockObject(DKGRAY_BRUSH));
 		FrameRect(hdc, &windowRect, GetStockObject(BLACK_BRUSH));
 
 		SetBkMode(hdc, TRANSPARENT);
 		SetTextColor(hdc, RGB(255, 255, 255));
 		RECT textRect;
+		//Get information about audio stream
 		WAVEFORMATEX wfx;
 		getWaveFormat(&wfx);
 
@@ -209,18 +221,22 @@ LRESULT CALLBACK WndProc(HWND hwnd, UINT msg, WPARAM wParam, LPARAM lParam)
 		//set new size of bars
 		if (barCount > 0)
 		{
+			//For every bar set width
 			for (int i = 0; i < barCount; i++)
 			{
 				bar[i].width = (unsigned int)((windowRect.right / barCount) + 1);
 				bar[i].x = i * (bar[i].width - 1);
 			}
 
+			//Calculates how many bar have to be larger
+			//Shifts bar to the right by how many bars already made bigger
 			for (int i = 0; i < windowRect.right % barCount; i++)
 			{
-				bar[i].width += 2;
+				bar[i].width += 1;
 				bar[i].x += i;
 			}
 
+			//Shifts all bars that weren't made larger to the right
 			for (int i = windowRect.right % barCount; i < barCount; i++)
 			{
 				bar[i].x += windowRect.right % barCount;
@@ -232,6 +248,7 @@ LRESULT CALLBACK WndProc(HWND hwnd, UINT msg, WPARAM wParam, LPARAM lParam)
 	break;
 	case WM_GETMINMAXINFO:
 	{
+		//Sets minimum window size
 		LPMINMAXINFO lpMMI = (LPMINMAXINFO)lParam;
 		lpMMI->ptMinTrackSize.x = 960;
 		lpMMI->ptMinTrackSize.y = 480;
@@ -241,19 +258,32 @@ LRESULT CALLBACK WndProc(HWND hwnd, UINT msg, WPARAM wParam, LPARAM lParam)
 		DestroyWindow(hwnd);
 		break;
 	case WM_DESTROY:
+		//Free Device Context used by Drawbar
 		DeleteObject(globalhbmBuffer);
 		ReleaseDC(hwnd, globalhdc);
 		DeleteDC(globalhdcBuffer);
-		free(bar);
-		writeSettings();
-		uninitializeRecording();
 		DeleteObject(barBrush);
+
+		//memory
+		free(bar);
+
+		//write settings to a file
+		writeSettings();
+
+		//stops recording
+		uninitializeRecording();
+		Exit();
+
+		//stops Serial transfer
 		if(doSerial)
 			CloseSerial(hwnd);
+
 		KillTimer(hwnd, ID_TIMER_UPDATE);
-		Exit();
+		
+		//Destroy dialog if open
 		DestroyWindow(SettingsDlg);
 		DestroyWindow(DeviceSelDlg);
+
 		PostQuitMessage(0);
 		break;
 	default:

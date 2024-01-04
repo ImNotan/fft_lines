@@ -62,7 +62,6 @@ extern "C" HRESULT getAudioDeviceCount(unsigned int* count);
 extern "C" HRESULT getAudioDeviceNames(unsigned int deviceNumber, wchar_t* deviceName);
 extern "C" HRESULT ChangeAudioStream(unsigned int deviceNumber);
 
-HRESULT WriteWaveHeader(HMMIO hFile, LPCWAVEFORMATEX pwfx, MMCKINFO* pckRIFF, MMCKINFO* pckData);
 HRESULT RecordAudioStream();
 
 HRESULT initializeRecording()
