@@ -169,15 +169,21 @@ LRESULT CALLBACK WndProc(HWND hwnd, UINT msg, WPARAM wParam, LPARAM lParam)
 	case WM_SIZE:
 	{
 		HDC hdc = GetDC(hwnd);
+
+		globalhdc = GetDC(hwnd);
+		globalhdcBuffer = CreateCompatibleDC(globalhdc);
+
 		RECT windowRect;
 
 		GetClientRect(hwnd, &windowRect);
 		//adjusts the window size for the bottomBar in which the frequencies are displayed
 		windowRect.top = windowRect.bottom - bottomBarHeihgt;
 
+		globalhbmBuffer = CreateCompatibleBitmap(globalhdc, windowRect.right, windowRect.bottom);
 
 		//sets background to gray
 		FillRect(hdc, &windowRect, GetStockObject(DKGRAY_BRUSH));
+		FrameRect(hdc, &windowRect, GetStockObject(BLACK_BRUSH));
 
 		SetBkMode(hdc, TRANSPARENT);
 		SetTextColor(hdc, RGB(255, 255, 255));
@@ -235,6 +241,9 @@ LRESULT CALLBACK WndProc(HWND hwnd, UINT msg, WPARAM wParam, LPARAM lParam)
 		DestroyWindow(hwnd);
 		break;
 	case WM_DESTROY:
+		DeleteObject(globalhbmBuffer);
+		ReleaseDC(hwnd, globalhdc);
+		DeleteDC(globalhdcBuffer);
 		free(bar);
 		writeSettings();
 		uninitializeRecording();
