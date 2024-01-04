@@ -77,6 +77,9 @@ If you want to build the application from source, follow these steps:
 2. Open the project in your preferred development environment (Visual Studio recommended for this project).
 3. Build the project.
 
+## Credits
+Inspiration from https://github.com/aiXander/Realtime_PyAudio_FFT
+
 ## Contributing
 
 Contributions are welcome! If you have ideas for improvements, new features, or bug fixes, please open an issue or submit a pull request.
