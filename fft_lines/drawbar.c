@@ -11,6 +11,10 @@
 
 #include "sgfilter.h"
 
+HDC globalhdc = NULL;
+HDC globalhdcBuffer = NULL;
+HBITMAP globalhbmBuffer = NULL;
+
 void SGS_smothing()
 {
 	int nl = 6;  //DEFAULT_NL;
@@ -51,26 +55,37 @@ void DrawBar()
 	}
 
 	RECT windowRect;
-	HDC hdc = GetDC(globalhwnd);
+	//HDC hdc = GetDC(globalhwnd);
 
 	//Get size of User Window
 	GetClientRect(globalhwnd, &windowRect);
 
-	HDC hdcBuffer = CreateCompatibleDC(hdc);
-	HBITMAP hbmBuffer = CreateCompatibleBitmap(hdc, windowRect.right, windowRect.bottom);
-	HBITMAP hbmOldBuffer = SelectObject(hdcBuffer, hbmBuffer);
+	//HDC hdcBuffer = CreateCompatibleDC(hdc);
+	//HBITMAP hbmBuffer = CreateCompatibleBitmap(globalhdc, windowRect.right, windowRect.bottom);
+	//HBITMAP hbmOldBuffer = SelectObject(globalhdcBuffer, globalhbmBuffer);
+	SelectObject(globalhdcBuffer, globalhbmBuffer);
 
 	//Sets the background to dark gray if background effect is deactivated
 	if(!background)
-		FillRect(hdcBuffer, &windowRect, GetStockObject(DKGRAY_BRUSH));
+		FillRect(globalhdcBuffer, &windowRect, GetStockObject(DKGRAY_BRUSH));
 
 	//adjusts the window size for the bottomBar in which the frequencies are displayed
 	windowRect.bottom -= bottomBarHeihgt;
 
 	//Creates the Background effect by copying the last frame to the new frame and moving it 5 to the right and 5 up
 	//after which the new bars are drawn on top of it
-	if(background)
-		BitBlt(hdcBuffer, 0, 0, windowRect.right, windowRect.bottom - 5, hdc, -5, 5, SRCCOPY);
+	if (background)
+	{
+		RECT background;
+
+		BitBlt(globalhdcBuffer, 0, 0, windowRect.right, windowRect.bottom - 5, globalhdc, -5, 5, SRCCOPY);
+
+		SetRect(&background, windowRect.left, windowRect.bottom - 5, windowRect.right, windowRect.bottom);
+		FillRect(globalhdcBuffer, &background, GetStockObject(BLACK_BRUSH));
+
+		SetRect(&background, windowRect.left, windowRect.top, windowRect.left + 5, windowRect.bottom - 5);
+		FillRect(globalhdcBuffer, &background, GetStockObject(WHITE_BRUSH));
+	}
 
 
 	TRIVERTEX vertex[2];
@@ -99,7 +114,7 @@ void DrawBar()
 			gRect.LowerRight = 1;
 			gRect.UpperLeft = 0;
 
-			GradientFill(hdcBuffer, vertex, 2, &gRect, 1, GRADIENT_FILL_RECT_V);
+			GradientFill(globalhdcBuffer, vertex, 2, &gRect, 1, GRADIENT_FILL_RECT_V);
 		}
 
 		//Calculates the bar size for use in border mode or no gradient mode
@@ -112,21 +127,21 @@ void DrawBar()
 			barRect.bottom = windowRect.bottom;
 
 			if (!gradient)
-				FillRect(hdcBuffer, &barRect, barBrush[(unsigned int)((float)(((float)i / ((float)barCount - 1.0)) * 254.0))]);
+				FillRect(globalhdcBuffer, &barRect, barBrush[(unsigned int)((float)(((float)i / ((float)barCount - 1.0)) * 254.0))]);
 
 
 
 			if (border)
-				FrameRect(hdcBuffer, &barRect, GetStockObject(DKGRAY_BRUSH));
+				FrameRect(globalhdcBuffer, &barRect, GetStockObject(DKGRAY_BRUSH));
 		}	
 	}
 
 	//copys buffer to window
-	BitBlt(hdc, 0, 0, windowRect.right, windowRect.bottom, hdcBuffer, 0, 0, SRCCOPY);
+	BitBlt(globalhdc, 0, 0, windowRect.right, windowRect.bottom, globalhdcBuffer, 0, 0, SRCCOPY);
 
-	SelectObject(hdcBuffer, hbmOldBuffer);
-	DeleteObject(hbmOldBuffer);
-	DeleteDC(hdcBuffer);
-	DeleteObject(hbmBuffer);
-	ReleaseDC(globalhwnd, hdc);
+	//SelectObject(globalhdcBuffer, hbmOldBuffer);
+	//DeleteObject(hbmOldBuffer);
+	//DeleteDC(hdcBuffer);
+	//DeleteObject(hbmBuffer);
+	//ReleaseDC(globalhwnd, hdc);
 }
