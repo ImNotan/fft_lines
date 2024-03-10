@@ -103,7 +103,7 @@ LRESULT CALLBACK WndProc(HWND hwnd, UINT msg, WPARAM wParam, LPARAM lParam)
 							bar[i].height = (int)(sqrt(pow(output[i][REAL], 2) + pow(output[i][IMAG], 2)) * zoom);
 
 							//multiplies it by function to lower low frequncies and boost high frequencies
-							bar[i].height *= sqrt((float)i + 1);
+							//bar[i].height *= 0.5 * sqrt((float)0.25 * i + 1);
 						}
 
 						free(input);
@@ -116,7 +116,7 @@ LRESULT CALLBACK WndProc(HWND hwnd, UINT msg, WPARAM wParam, LPARAM lParam)
 					}
 
 					//smoothing with Savitzky-Golay
-					SGS_smothing();
+					//SGS_smothing();
 
 					//Prints to serial
 					if (bar[led_bar].height >= 0 && doSerial)
