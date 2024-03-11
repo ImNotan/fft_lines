@@ -6,6 +6,7 @@
 #include <stdlib.h>
 #define _USE_MATH_DEFINES
 #include <math.h>
+#include <mfapi.h>
 
 #include "resource.h"
 #include "serial.h"
@@ -32,10 +33,35 @@ HWND globalhwnd;
 
 //Defines a Timer ID
 #define ID_TIMER_UPDATE 1
+#define ID_TIMER_UPDATE2 2
 
 //Audio Buffer
 int16_t largeBuffer[2048];
 
+#define MAXSAMPLES 100
+int tickindex = 0;
+int ticksum = 0;
+int ticklist[MAXSAMPLES];
+
+SYSTEMTIME start, stop;
+FILETIME startF, stopF;
+ULARGE_INTEGER startI, stopI;
+
+LARGE_INTEGER StartingTime, EndingTime, ElapsedMicroseconds;
+LARGE_INTEGER Frequency;
+
+int frameRate = 0;
+
+double CalcAverageTick(int newtick)
+{
+	ticksum -= ticklist[tickindex];				/* subtract value falling off */
+	ticksum += newtick;							/* add new value */
+	ticklist[tickindex] = newtick;				/* save new value so it can be subtracted later */
+	tickindex = (tickindex + 1) % MAXSAMPLES;   /* inc buffer index */
+
+	/* return average */
+	return((double)ticksum / MAXSAMPLES);
+}
 
 LRESULT CALLBACK WndProc(HWND hwnd, UINT msg, WPARAM wParam, LPARAM lParam)
 {
@@ -49,6 +75,14 @@ LRESULT CALLBACK WndProc(HWND hwnd, UINT msg, WPARAM wParam, LPARAM lParam)
 		else
 			doSerial = InitializeSerial(hwnd);
 
+		for (int i = 0; i < MAXSAMPLES; i++)
+		{
+			ticklist[i] = 0;
+		}
+		
+		QueryPerformanceFrequency(&Frequency);
+		QueryPerformanceCounter(&StartingTime);
+
 		//Looks for settings and applies them
 		initializeSettingsFile(hwnd);
 		readSettings();
@@ -61,78 +95,98 @@ LRESULT CALLBACK WndProc(HWND hwnd, UINT msg, WPARAM wParam, LPARAM lParam)
 		startRecording();
 
 		//Sets the update Timer to call every 5ms
-		if (SetTimer(hwnd, ID_TIMER_UPDATE, 5, NULL) == 0)
+		if (SetTimer(hwnd, ID_TIMER_UPDATE, 1, NULL) == 0)
 		{
 			MessageBox(hwnd, L"Could not SetTimer()", L"Error", MB_OK | MB_ICONINFORMATION);
 		}
+		SetTimer(hwnd, ID_TIMER_UPDATE2, 1, NULL);
 	}
 	break;
 	case WM_TIMER:
 	{
-		switch(wParam)
+		QueryPerformanceCounter(&EndingTime);
+		ElapsedMicroseconds.QuadPart = EndingTime.QuadPart - StartingTime.QuadPart;
+
+		ElapsedMicroseconds.QuadPart *= 1000000;
+		ElapsedMicroseconds.QuadPart /= Frequency.QuadPart;
+
+		double averageTick = CalcAverageTick((int)(ElapsedMicroseconds.QuadPart));
+		frameRate = 1000000 / averageTick;
+
+		RECT windowRect;
+
+		GetClientRect(hwnd, &windowRect);
+
+		RECT textRect;
+
+		textRect.top = windowRect.bottom;
+		textRect.bottom = windowRect.bottom - bottomBarHeihgt;
+		textRect.right = windowRect.left + 100;
+		textRect.left = windowRect.left;
+
+		wchar_t buffer[10];
+		wsprintfW(buffer, L"%d", (int)frameRate);
+
+		DrawTextW(globalhdc, buffer, 10, &textRect, DT_LEFT | DT_VCENTER | DT_SINGLELINE);
+
+
+		QueryPerformanceCounter(&StartingTime);
+
+		BOOL bdone = false;
+		GetAudioBuffer(&largeBuffer, &bdone);
+
+		if (bdone)
 		{
-			case ID_TIMER_UPDATE:
+			//Calculates fourier transfor of audio data
+			fftwf_complex *input;
+			fftwf_complex *output;
+
+			input = (fftwf_complex*)malloc(N * sizeof(fftwf_complex));
+			output = (fftwf_complex*)malloc(N * sizeof(fftwf_complex));
+
+			if (input && output)
 			{
-
-				BOOL bdone = false;
-				GetAudioBuffer(&largeBuffer, &bdone);
-
-				if (bdone)
+				for (int i = 0; i < N; i++)
 				{
-					//Calculates fourier transfor of audio data
-					fftwf_complex *input;
-					fftwf_complex *output;
-
-					input = (fftwf_complex*)malloc(N * sizeof(fftwf_complex));
-					output = (fftwf_complex*)malloc(N * sizeof(fftwf_complex));
-
-					if (input && output)
-					{
-						for (int i = 0; i < N; i++)
-						{
-							input[i][REAL] = (float)largeBuffer[i];
-							input[i][IMAG] = 0;
-						}
-
-						fft(input, output);
-
-						//Sets the height of the bars calculated by fourier transfor
-						for (int i = 0; i < barCount; i++)
-						{
-							//Calculates distance to origin with Pythagoras in complex plane
-							bar[i].height = (int)(sqrt(pow(output[i][REAL], 2) + pow(output[i][IMAG], 2)) * zoom);
-
-							//multiplies it by function to lower low frequncies and boost high frequencies
-							//bar[i].height *= 0.5 * sqrt((float)0.25 * i + 1);
-						}
-
-						free(input);
-						free(output);
-					}
-					else
-					{
-						MessageBoxA(hwnd, "Failed to allocate memory for input or output", "Warning", MB_OK);
-						SendMessageW(hwnd, WM_DESTROY, NULL, NULL);
-					}
-
-					//smoothing with Savitzky-Golay
-					//SGS_smothing();
-
-					//Prints to serial
-					if (bar[led_bar].height >= 0 && doSerial)
-					{
-						char line[1];
-						line[0] = (char)((float)bar[led_bar].height * 0.1f);
-						WriteSerial(line, globalhwnd);
-					}
-
-					//Draws bars on screen
-					DrawBar();
+					input[i][REAL] = (float)largeBuffer[i];
+					input[i][IMAG] = 0;
 				}
-				break;
+
+				fft(input, output);
+
+				//Sets the height of the bars calculated by fourier transfor
+				for (int i = 0; i < barCount; i++)
+				{
+					//Calculates distance to origin with Pythagoras in complex plane
+					bar[i].height = (int)(sqrt(pow(output[i][REAL], 2) + pow(output[i][IMAG], 2)) * zoom);
+
+					//multiplies it by function to lower low frequncies and boost high frequencies
+					//bar[i].height *= 0.5 * sqrt((float)0.25 * i + 1);
+				}
+
+				free(input);
+				free(output);
 			}
+			else
+			{
+				MessageBoxA(hwnd, "Failed to allocate memory for input or output", "Warning", MB_OK);
+				SendMessageW(hwnd, WM_DESTROY, NULL, NULL);
+			}
+
+			//smoothing with Savitzky-Golay
+			//SGS_smothing();
+
+			//Prints to serial
+			if (bar[led_bar].height >= 0 && doSerial)
+			{
+				char line[1];
+				line[0] = (char)((float)bar[led_bar].height * 0.1f);
+				WriteSerial(line, globalhwnd);
+			}
+
+			//Draws bars on screen
+			DrawBar();
 		}
-		
 	}
 	break;
 	case WM_COMMAND:

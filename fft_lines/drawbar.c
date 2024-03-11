@@ -47,7 +47,6 @@ void DrawBar()
 		FillRect(globalhdcBuffer, &background, GetStockObject(WHITE_BRUSH));
 	}
 
-
 	TRIVERTEX vertex[2];
 	RECT barRect;
 	for (int i = 0; i < barCount; i++)
