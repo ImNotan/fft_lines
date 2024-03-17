@@ -29,6 +29,7 @@ void getWaveFormat(WAVEFORMATEX* waveformat);
 void    DiscardGraphicsResources();
 void    OnPaint(HWND hwnd);
 HRESULT PaintStart();
+void Resize(HWND hwnd);
 
 const char g_szClassName[] = "myWindowClass";
 
@@ -100,16 +101,15 @@ LRESULT CALLBACK WndProc(HWND hwnd, UINT msg, WPARAM wParam, LPARAM lParam)
 		startRecording();
 
 		//Sets the update Timer to call every 5ms
-		//if (SetTimer(hwnd, ID_TIMER_UPDATE, 1, NULL) == 0)
-		//{
-		//	MessageBox(hwnd, L"Could not SetTimer()", L"Error", MB_OK | MB_ICONINFORMATION);
-		//}
-		//SetTimer(hwnd, ID_TIMER_UPDATE2, 1, NULL);
+		if (SetTimer(hwnd, ID_TIMER_UPDATE, 1, NULL) == 0)
+		{
+			MessageBox(hwnd, L"Could not SetTimer()", L"Error", MB_OK | MB_ICONINFORMATION);
+		}
+		SetTimer(hwnd, ID_TIMER_UPDATE2, 1, NULL);
 	}
 	break;
-	case WM_PAINT:
+	case WM_TIMER:
 	{
-		OnPaint(hwnd);
 		QueryPerformanceCounter(&EndingTime);
 		ElapsedMicroseconds.QuadPart = EndingTime.QuadPart - StartingTime.QuadPart;
 
@@ -123,6 +123,8 @@ LRESULT CALLBACK WndProc(HWND hwnd, UINT msg, WPARAM wParam, LPARAM lParam)
 
 		GetClientRect(hwnd, &windowRect);
 
+		SetBkMode(globalhdc, TRANSPARENT);
+		SetTextColor(globalhdc, RGB(255, 255, 255));
 		RECT textRect;
 
 		textRect.top = windowRect.bottom;
@@ -130,10 +132,10 @@ LRESULT CALLBACK WndProc(HWND hwnd, UINT msg, WPARAM wParam, LPARAM lParam)
 		textRect.right = windowRect.left + 100;
 		textRect.left = windowRect.left;
 
-		wchar_t buffer[10];
+		wchar_t buffer[4];
 		wsprintfW(buffer, L"%d", (int)frameRate);
 
-		DrawTextW(globalhdc, buffer, 10, &textRect, DT_LEFT | DT_VCENTER | DT_SINGLELINE);
+		DrawTextW(globalhdc, buffer, 4, &textRect, DT_LEFT | DT_VCENTER | DT_SINGLELINE);
 
 
 		QueryPerformanceCounter(&StartingTime);
@@ -192,6 +194,7 @@ LRESULT CALLBACK WndProc(HWND hwnd, UINT msg, WPARAM wParam, LPARAM lParam)
 
 			//Draws bars on screen
 			//DrawBar();
+			OnPaint(hwnd);
 		}
 	}
 	break;
@@ -236,6 +239,7 @@ LRESULT CALLBACK WndProc(HWND hwnd, UINT msg, WPARAM wParam, LPARAM lParam)
 		break;
 	case WM_SIZE:
 	{
+		Resize(hwnd);
 		HDC hdc = GetDC(hwnd);
 
 		DeleteDC(globalhdcBuffer);
