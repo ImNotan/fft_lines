@@ -26,6 +26,10 @@ HRESULT startRecording();
 void Exit();
 void getWaveFormat(WAVEFORMATEX* waveformat);
 
+void    DiscardGraphicsResources();
+void    OnPaint(HWND hwnd);
+HRESULT PaintStart();
+
 const char g_szClassName[] = "myWindowClass";
 
 //Initialize global handle for use in whole document
@@ -69,6 +73,7 @@ LRESULT CALLBACK WndProc(HWND hwnd, UINT msg, WPARAM wParam, LPARAM lParam)
 	{
 	case WM_CREATE:
 	{
+		PaintStart();
 		//Look if User wants Serial and if it is connected
 		if (ignoreSerial)
 			doSerial = false;
@@ -104,6 +109,7 @@ LRESULT CALLBACK WndProc(HWND hwnd, UINT msg, WPARAM wParam, LPARAM lParam)
 	break;
 	case WM_PAINT:
 	{
+		OnPaint(hwnd);
 		QueryPerformanceCounter(&EndingTime);
 		ElapsedMicroseconds.QuadPart = EndingTime.QuadPart - StartingTime.QuadPart;
 
@@ -185,7 +191,7 @@ LRESULT CALLBACK WndProc(HWND hwnd, UINT msg, WPARAM wParam, LPARAM lParam)
 			}
 
 			//Draws bars on screen
-			DrawBar();
+			//DrawBar();
 		}
 	}
 	break;
@@ -312,6 +318,7 @@ LRESULT CALLBACK WndProc(HWND hwnd, UINT msg, WPARAM wParam, LPARAM lParam)
 		DestroyWindow(hwnd);
 		break;
 	case WM_DESTROY:
+		DiscardGraphicsResources();
 		//Free Device Context used by Drawbar
 		DeleteObject(globalhbmBuffer);
 		ReleaseDC(hwnd, globalhdc);

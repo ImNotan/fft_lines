@@ -42,6 +42,9 @@
     <ClCompile Include="showerror.c">
       <Filter>Source Files</Filter>
     </ClCompile>
+    <ClCompile Include="drawBar2D.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="resource.h">
