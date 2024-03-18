@@ -29,7 +29,7 @@ void getWaveFormat(WAVEFORMATEX* waveformat);
 void    DiscardGraphicsResources();
 void    OnPaint(HWND hwnd);
 HRESULT PaintStart();
-void Resize(HWND hwnd);
+void Resize(HWND hwnd, DWORD nSamplesPerSec);
 
 const char g_szClassName[] = "myWindowClass";
 
@@ -105,41 +105,11 @@ LRESULT CALLBACK WndProc(HWND hwnd, UINT msg, WPARAM wParam, LPARAM lParam)
 		{
 			MessageBox(hwnd, L"Could not SetTimer()", L"Error", MB_OK | MB_ICONINFORMATION);
 		}
-		SetTimer(hwnd, ID_TIMER_UPDATE2, 1, NULL);
+		//SetTimer(hwnd, ID_TIMER_UPDATE2, 1, NULL);
 	}
 	break;
 	case WM_TIMER:
 	{
-		QueryPerformanceCounter(&EndingTime);
-		ElapsedMicroseconds.QuadPart = EndingTime.QuadPart - StartingTime.QuadPart;
-
-		ElapsedMicroseconds.QuadPart *= 1000000;
-		ElapsedMicroseconds.QuadPart /= Frequency.QuadPart;
-
-		double averageTick = CalcAverageTick((int)(ElapsedMicroseconds.QuadPart));
-		frameRate = 1000000 / averageTick;
-
-		RECT windowRect;
-
-		GetClientRect(hwnd, &windowRect);
-
-		SetBkMode(globalhdc, TRANSPARENT);
-		SetTextColor(globalhdc, RGB(255, 255, 255));
-		RECT textRect;
-
-		textRect.top = windowRect.bottom;
-		textRect.bottom = windowRect.bottom - bottomBarHeihgt;
-		textRect.right = windowRect.left + 100;
-		textRect.left = windowRect.left;
-
-		wchar_t buffer[4];
-		wsprintfW(buffer, L"%d", (int)frameRate);
-
-		DrawTextW(globalhdc, buffer, 4, &textRect, DT_LEFT | DT_VCENTER | DT_SINGLELINE);
-
-
-		QueryPerformanceCounter(&StartingTime);
-
 		BOOL bdone = false;
 		GetAudioBuffer(&largeBuffer, &bdone);
 
@@ -195,6 +165,36 @@ LRESULT CALLBACK WndProc(HWND hwnd, UINT msg, WPARAM wParam, LPARAM lParam)
 			//Draws bars on screen
 			//DrawBar();
 			OnPaint(hwnd);
+
+			QueryPerformanceCounter(&EndingTime);
+			ElapsedMicroseconds.QuadPart = EndingTime.QuadPart - StartingTime.QuadPart;
+
+			ElapsedMicroseconds.QuadPart *= 1000000;
+			ElapsedMicroseconds.QuadPart /= Frequency.QuadPart;
+
+			double averageTick = CalcAverageTick((int)(ElapsedMicroseconds.QuadPart));
+			frameRate = 1000000 / averageTick;
+
+			RECT windowRect;
+
+			GetClientRect(hwnd, &windowRect);
+
+			SetBkMode(globalhdc, TRANSPARENT);
+			SetTextColor(globalhdc, RGB(255, 255, 255));
+			RECT textRect;
+
+			textRect.top = windowRect.bottom;
+			textRect.bottom = windowRect.bottom - bottomBarHeihgt;
+			textRect.right = windowRect.left + 100;
+			textRect.left = windowRect.left;
+
+			wchar_t buffer[5];
+			wsprintfW(buffer, L"%d", (int)frameRate);
+
+			DrawTextW(globalhdc, buffer, 4, &textRect, DT_LEFT | DT_VCENTER | DT_SINGLELINE);
+
+
+			QueryPerformanceCounter(&StartingTime);
 		}
 	}
 	break;
@@ -239,48 +239,11 @@ LRESULT CALLBACK WndProc(HWND hwnd, UINT msg, WPARAM wParam, LPARAM lParam)
 		break;
 	case WM_SIZE:
 	{
-		Resize(hwnd);
-		HDC hdc = GetDC(hwnd);
-
-		DeleteDC(globalhdcBuffer);
-		ReleaseDC(hwnd, globalhdc);
-		globalhdc = GetDC(hwnd);
-		globalhdcBuffer = CreateCompatibleDC(globalhdc);
-
 		RECT windowRect;
-
 		GetClientRect(hwnd, &windowRect);
-
-		//adjusts the window size for the bottomBar in which the frequencies are displayed
-		windowRect.top = windowRect.bottom - bottomBarHeihgt;
-
-		globalhbmBuffer = CreateCompatibleBitmap(globalhdc, windowRect.right, windowRect.bottom);
-
-		//sets bottombar to gray
-		FillRect(hdc, &windowRect, GetStockObject(DKGRAY_BRUSH));
-		FrameRect(hdc, &windowRect, GetStockObject(BLACK_BRUSH));
-
-		SetBkMode(hdc, TRANSPARENT);
-		SetTextColor(hdc, RGB(255, 255, 255));
-		RECT textRect;
 		//Get information about audio stream
 		WAVEFORMATEX wfx;
 		getWaveFormat(&wfx);
-
-		for (int i = 0; i < 10; i++)
-		{
-			textRect.top = windowRect.bottom;
-			textRect.bottom = windowRect.bottom - bottomBarHeihgt;
-			textRect.left = i * (windowRect.right / 10);
-			textRect.right = i * (windowRect.right / 10) + (windowRect.right / 10);
-
-			//Gets frequencies from audio function
-			int freq = (i * (barCount / 10) + (barCount / 20)) * (wfx.nSamplesPerSec / N);
-			wchar_t buffer[11];
-			wsprintfW(buffer, L"%dHz ", freq);
-
-			DrawText(hdc, buffer, 7, &textRect, DT_CENTER | DT_VCENTER | DT_SINGLELINE);
-		}
 
 		//set new size of bars
 		if (barCount > 0)
@@ -307,7 +270,7 @@ LRESULT CALLBACK WndProc(HWND hwnd, UINT msg, WPARAM wParam, LPARAM lParam)
 			}
 		}
 
-		ReleaseDC(hwnd, hdc);
+		Resize(hwnd, wfx.nSamplesPerSec);
 	}
 	break;
 	case WM_GETMINMAXINFO:
