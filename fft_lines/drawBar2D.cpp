@@ -25,6 +25,7 @@ template <class T> void SafeRelease(T** ppT)
 
 ID2D1Factory* pFactory;
 ID2D1HwndRenderTarget* pRenderTarget;
+ID2D1Bitmap* pBufferBitmap;
 ID2D1SolidColorBrush* pBrush;
 ID2D1SolidColorBrush* backgroundBrush;
 ID2D1LinearGradientBrush* pbarBrush[256];
@@ -34,7 +35,7 @@ IDWriteFactory* pWriteFactory;
 
 extern "C" HRESULT CreateGraphicsResources(HWND hwnd);
 extern "C" void    DiscardGraphicsResources();
-extern "C" void    OnPaint(HWND hwnd);
+extern "C" void    OnPaint(HWND hwnd, int framerate);
 extern "C" HRESULT PaintStart();
 extern "C" void    Resize(HWND hwnd, DWORD nSamplesPerSec);
 
@@ -90,6 +91,8 @@ HRESULT CreateGraphicsResources(HWND hwnd)
             color = D2D1::ColorF(D2D1::ColorF(D2D1::ColorF(0.25f, 0.25f, 0.25f)));
             hr = pRenderTarget->CreateSolidColorBrush(color, &backgroundBrush);
 
+            hr = pRenderTarget->CreateBitmap(size, D2D1::BitmapProperties(D2D1::PixelFormat(DXGI_FORMAT_B8G8R8A8_UNORM, D2D1_ALPHA_MODE_IGNORE)), &pBufferBitmap);
+
             ID2D1GradientStopCollection* pGradientStops = NULL;
 
             D2D1_GRADIENT_STOP gradientStops[2];
@@ -133,7 +136,7 @@ void DiscardGraphicsResources()
     SafeRelease(&pFactory);
 }
 
-void OnPaint(HWND hwnd)
+void OnPaint(HWND hwnd, int framerate)
 {
     HRESULT hr = CreateGraphicsResources(hwnd);
     if (SUCCEEDED(hr))
@@ -141,15 +144,29 @@ void OnPaint(HWND hwnd)
         RECT windowRect;
         GetClientRect(hwnd, &windowRect);
         windowRect.bottom -= bottomBarHeihgt;
-        //PAINTSTRUCT ps;
+        PAINTSTRUCT ps;
         D2D1_RECT_F barRect;
-        //BeginPaint(hwnd, &ps);
+        BeginPaint(hwnd, &ps);
+
+        D2D1_POINT_2U upperLeft = D2D1::Point2U(0, 0);
+        D2D1_RECT_U d2d1windowRectU = D2D1::RectU(windowRect.left, windowRect.top, windowRect.right, windowRect.bottom);
+        D2D1_RECT_F d2d1windowRectF = D2D1::RectF(windowRect.left, windowRect.top, windowRect.right, windowRect.bottom);
 
         pRenderTarget->BeginDraw();
 
-        //pRenderTarget->Clear(D2D1::ColorF(D2D1::ColorF::DarkGray));
         D2D1_RECT_F background = D2D1::Rect(windowRect.left, windowRect.top, windowRect.right, windowRect.bottom);
-        pRenderTarget->FillRectangle(&background, backgroundBrush);
+        pBrush->SetColor(D2D1::ColorF(0.0f, 0.0f, 0.0f));
+        pRenderTarget->FillRectangle(&background, pBrush);
+
+        if (pBufferBitmap != NULL)
+        {
+            pRenderTarget->SetTransform(D2D1::Matrix3x2F::Translation(5, -5));
+            pRenderTarget->DrawBitmap(pBufferBitmap, d2d1windowRectF, 1.0f, D2D1_BITMAP_INTERPOLATION_MODE_LINEAR, d2d1windowRectF);
+        }
+
+        pRenderTarget->SetTransform(D2D1::Matrix3x2F::Translation(0, 0));
+
+        //pRenderTarget->Clear(D2D1::ColorF(D2D1::ColorF::DarkGray));
 
         for (int i = 0; i < barCount; i++)
         {
@@ -159,12 +176,28 @@ void OnPaint(HWND hwnd)
             pRenderTarget->FillRectangle(&barRect, pbarBrush[(unsigned int)((float)(((float)i / ((float)barCount - 1.0)) * 254.0))]);
         }
 
+        D2D1_RECT_F textRect;
+
+        windowRect.bottom += bottomBarHeihgt;
+        windowRect.top = windowRect.bottom - bottomBarHeihgt;
+
+        textRect = D2D1::Rect(windowRect.left, windowRect.top, windowRect.left + 45, windowRect.bottom);
+        wchar_t buffer[15] = L"       ";
+        wsprintfW(buffer, L"%d", framerate);
+
+        pBrush->SetColor(D2D1::ColorF(0.15f, 0.15f, 0.15f));
+        pRenderTarget->FillRectangle(&textRect, pBrush);
+        pBrush->SetColor(D2D1::ColorF(1.0f, 1.0f, 1.0f));
+        pRenderTarget->DrawTextW(buffer, 8, pTextFormat, textRect, pBrush);
+
+        pBufferBitmap->CopyFromRenderTarget(&upperLeft, pRenderTarget, &d2d1windowRectU);
+
         hr = pRenderTarget->EndDraw();
         if (FAILED(hr) || hr == D2DERR_RECREATE_TARGET)
         {
             DiscardGraphicsResources();
         }
-        //EndPaint(hwnd, &ps);
+        EndPaint(hwnd, &ps);
         //InvalidateRect(hwnd, NULL, FALSE);
         
     }
@@ -182,6 +215,7 @@ void Resize(HWND hwnd, DWORD nSamplesPerSec)
         D2D1_SIZE_U size = D2D1::SizeU(windowRect.right, windowRect.bottom);
 
         pRenderTarget->Resize(size);
+        pRenderTarget->CreateBitmap(size, D2D1::BitmapProperties(D2D1::PixelFormat(DXGI_FORMAT_B8G8R8A8_UNORM, D2D1_ALPHA_MODE_IGNORE)), &pBufferBitmap);
 
         pRenderTarget->BeginDraw();
 

@@ -304,12 +304,12 @@ BOOL CALLBACK SettingsDlgProc(HWND hwnd, UINT Message, WPARAM wParam, LPARAM lPa
 			wcscpy_s(A, sizeof(A) / sizeof(TCHAR), (TCHAR*)Planets[k]);
 
 			// Add string to combobox.
-			SendMessage(hwndComboBox, (UINT)CB_ADDSTRING, (WPARAM)0, (LPARAM)A);
+			SendMessageW(hwndComboBox, (UINT)CB_ADDSTRING, (WPARAM)0, (LPARAM)A);
 		}
 
 		// Send the CB_SETCURSEL message to display an initial item 
 		//  in the selection field  
-		SendMessage(hwndComboBox, CB_SETCURSEL, (WPARAM)0, (LPARAM)0);
+		SendMessageW(hwndComboBox, CB_SETCURSEL, (WPARAM)colorSel, (LPARAM)0);
 	}
 	break;
 	case WM_COMMAND:

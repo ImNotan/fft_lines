@@ -20,16 +20,16 @@
 
 //Define .cpp functions for audio recording with WASAPI
 HRESULT initializeRecording();
-void uninitializeRecording();
+void	uninitializeRecording();
 HRESULT GetAudioBuffer(int16_t* buffer, BOOL* bdone);
 HRESULT startRecording();
-void Exit();
-void getWaveFormat(WAVEFORMATEX* waveformat);
+void	Exit();
+void	getWaveFormat(WAVEFORMATEX* waveformat);
 
 void    DiscardGraphicsResources();
-void    OnPaint(HWND hwnd);
+void    OnPaint(HWND hwnd, int framerate);
 HRESULT PaintStart();
-void Resize(HWND hwnd, DWORD nSamplesPerSec);
+void	Resize(HWND hwnd, DWORD nSamplesPerSec);
 
 const char g_szClassName[] = "myWindowClass";
 
@@ -47,10 +47,6 @@ int16_t largeBuffer[2048];
 int tickindex = 0;
 int ticksum = 0;
 int ticklist[MAXSAMPLES];
-
-SYSTEMTIME start, stop;
-FILETIME startF, stopF;
-ULARGE_INTEGER startI, stopI;
 
 LARGE_INTEGER StartingTime, EndingTime, ElapsedMicroseconds;
 LARGE_INTEGER Frequency;
@@ -101,11 +97,7 @@ LRESULT CALLBACK WndProc(HWND hwnd, UINT msg, WPARAM wParam, LPARAM lParam)
 		startRecording();
 
 		//Sets the update Timer to call every 5ms
-		if (SetTimer(hwnd, ID_TIMER_UPDATE, 1, NULL) == 0)
-		{
-			MessageBox(hwnd, L"Could not SetTimer()", L"Error", MB_OK | MB_ICONINFORMATION);
-		}
-		//SetTimer(hwnd, ID_TIMER_UPDATE2, 1, NULL);
+		SetTimer(hwnd, ID_TIMER_UPDATE, 10, NULL);
 	}
 	break;
 	case WM_TIMER:
@@ -164,7 +156,6 @@ LRESULT CALLBACK WndProc(HWND hwnd, UINT msg, WPARAM wParam, LPARAM lParam)
 
 			//Draws bars on screen
 			//DrawBar();
-			OnPaint(hwnd);
 
 			QueryPerformanceCounter(&EndingTime);
 			ElapsedMicroseconds.QuadPart = EndingTime.QuadPart - StartingTime.QuadPart;
@@ -175,26 +166,9 @@ LRESULT CALLBACK WndProc(HWND hwnd, UINT msg, WPARAM wParam, LPARAM lParam)
 			double averageTick = CalcAverageTick((int)(ElapsedMicroseconds.QuadPart));
 			frameRate = 1000000 / averageTick;
 
-			RECT windowRect;
-
-			GetClientRect(hwnd, &windowRect);
-
-			SetBkMode(globalhdc, TRANSPARENT);
-			SetTextColor(globalhdc, RGB(255, 255, 255));
-			RECT textRect;
-
-			textRect.top = windowRect.bottom;
-			textRect.bottom = windowRect.bottom - bottomBarHeihgt;
-			textRect.right = windowRect.left + 100;
-			textRect.left = windowRect.left;
-
-			wchar_t buffer[5];
-			wsprintfW(buffer, L"%d", (int)frameRate);
-
-			DrawTextW(globalhdc, buffer, 4, &textRect, DT_LEFT | DT_VCENTER | DT_SINGLELINE);
-
-
 			QueryPerformanceCounter(&StartingTime);
+
+			OnPaint(hwnd, frameRate);
 		}
 	}
 	break;
