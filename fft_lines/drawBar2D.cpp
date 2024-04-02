@@ -161,11 +161,17 @@ HRESULT CreateGraphicsResources(HWND hwnd)
 
 void DrawBackground(RECT windowRect)
 {
-    D2D1_RECT_F backgroundRect = D2D1::RectF(windowRect.left, windowRect.top, windowRect.right, windowRect.bottom);
     if (background)
     {
+        D2D1_RECT_F backgroundRect = D2D1::RectF(windowRect.left, windowRect.top, 5, windowRect.bottom);
+        pBrush->SetColor(D2D1::ColorF(1.0f, 1.0f, 1.0f));
+        pRenderTarget->FillRectangle(&backgroundRect, pBrush);
+
+        backgroundRect = D2D1::RectF(windowRect.left + 5, windowRect.top, windowRect.right, windowRect.bottom);
         pBrush->SetColor(D2D1::ColorF(0.0f, 0.0f, 0.0f));
         pRenderTarget->FillRectangle(&backgroundRect, pBrush);
+
+        backgroundRect = D2D1::RectF(windowRect.left, windowRect.top, windowRect.right, windowRect.bottom);
 
         if (pBufferBitmap != NULL)
         {
@@ -177,6 +183,7 @@ void DrawBackground(RECT windowRect)
     }
     else
     {
+        D2D1_RECT_F backgroundRect = D2D1::RectF(windowRect.left, windowRect.top, windowRect.right, windowRect.bottom);
         pBrush->SetColor(D2D1::ColorF(0.4f, 0.4f, 0.4f));
         pRenderTarget->FillRectangle(&backgroundRect, pBrush);
     }

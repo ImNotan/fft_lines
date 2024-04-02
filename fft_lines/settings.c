@@ -270,7 +270,7 @@ BOOL CALLBACK SettingsDlgProc(HWND hwnd, UINT Message, WPARAM wParam, LPARAM lPa
 			WS_CHILD | WS_VISIBLE | TBS_AUTOTICKS,
 			50, 60, 300, 30, hwnd, IDC_SLIDER_ZOOM, NULL, NULL);
 
-		SendMessageW(hBarcountSlider, TBM_SETRANGE, TRUE, MAKELONG(100, 1000));
+		SendMessageW(hBarcountSlider, TBM_SETRANGE, TRUE, MAKELONG(MIN_BARCOUNT, MAX_BARCOUNT));
 		SendMessageW(hBarcountSlider, TBM_SETPAGESIZE, 0, 10);
 		SendMessageW(hBarcountSlider, TBM_SETTICFREQ, 10, 0);
 		SendMessageW(hBarcountSlider, TBM_SETPOS, FALSE, barCount);

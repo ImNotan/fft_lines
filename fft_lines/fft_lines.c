@@ -104,6 +104,7 @@ LRESULT CALLBACK WndProc(HWND hwnd, UINT msg, WPARAM wParam, LPARAM lParam)
 
 		//Sets the update Timer to call every 10ms
 		SetTimer(hwnd, ID_TIMER_UPDATE, 10, NULL);
+		//SetTimer(hwnd, ID_TIMER_UPDATE2, 10, NULL);
 	}
 	break;
 	case WM_TIMER:
