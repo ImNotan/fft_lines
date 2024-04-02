@@ -18,7 +18,7 @@
 #include "showerror.h"
 #include "sgfilter.h"
 
-//Define .cpp functions for audio recording with WASAPI
+//Define wasapi_audio.cpp functions for audio recording with WASAPI
 HRESULT initializeRecording();
 void	uninitializeRecording();
 HRESULT GetAudioBuffer(int16_t* buffer, BOOL* bdone);
@@ -26,6 +26,7 @@ HRESULT startRecording();
 void	Exit();
 void	getWaveFormat(WAVEFORMATEX* waveformat);
 
+//Define drawBar2D.cpp functions for drawing on screen with Direct2D
 void    DiscardGraphicsResources();
 void    OnPaint(HWND hwnd, int frameRate);
 HRESULT PaintStart();
@@ -43,6 +44,7 @@ HWND globalhwnd;
 //Audio Buffer
 int16_t largeBuffer[2048];
 
+//average frame rate calculation variables
 #define MAXSAMPLES 100
 int tickindex = 0;
 int ticksum = 0;
@@ -70,7 +72,9 @@ LRESULT CALLBACK WndProc(HWND hwnd, UINT msg, WPARAM wParam, LPARAM lParam)
 	{
 	case WM_CREATE:
 	{
+		//Initialize Factories in drawBar2D.cpp
 		PaintStart();
+
 		//Look if User wants Serial and if it is connected
 		if (ignoreSerial)
 			doSerial = false;
@@ -82,10 +86,11 @@ LRESULT CALLBACK WndProc(HWND hwnd, UINT msg, WPARAM wParam, LPARAM lParam)
 			ticklist[i] = 0;
 		}
 		
+		//Initialize high frequency counter for frame rate calculation
 		QueryPerformanceFrequency(&Frequency);
 		QueryPerformanceCounter(&StartingTime);
 
-		//Looks for settings and applies them
+		//Looks for settings file and applies them
 		initializeSettingsFile(hwnd);
 		readSettings();
 
@@ -96,9 +101,10 @@ LRESULT CALLBACK WndProc(HWND hwnd, UINT msg, WPARAM wParam, LPARAM lParam)
 		initializeRecording();
 		startRecording();
 
+		//Initializes graphics resources in drawBar2D.cpp
 		OnPaint(hwnd, 1);
 
-		//Sets the update Timer to call every 5ms
+		//Sets the update Timer to call every 10ms
 		SetTimer(hwnd, ID_TIMER_UPDATE, 10, NULL);
 	}
 	break;
@@ -144,9 +150,6 @@ LRESULT CALLBACK WndProc(HWND hwnd, UINT msg, WPARAM wParam, LPARAM lParam)
 				MessageBoxA(hwnd, "Failed to allocate memory for input or output", "Warning", MB_OK);
 				SendMessageW(hwnd, WM_DESTROY, NULL, NULL);
 			}
-
-			//smoothing with Savitzky-Golay
-			//SGS_smothing();
 
 			//Prints to serial
 			if (bar[led_bar].height >= 0 && doSerial)
