@@ -27,7 +27,7 @@ void	Exit();
 void	getWaveFormat(WAVEFORMATEX* waveformat);
 
 void    DiscardGraphicsResources();
-void    OnPaint(HWND hwnd, int framerate);
+void    OnPaint(HWND hwnd, int frameRate);
 HRESULT PaintStart();
 void	Resize(HWND hwnd, DWORD nSamplesPerSec);
 
@@ -95,6 +95,8 @@ LRESULT CALLBACK WndProc(HWND hwnd, UINT msg, WPARAM wParam, LPARAM lParam)
 		//Starts Recording Audio
 		initializeRecording();
 		startRecording();
+
+		OnPaint(hwnd, 1);
 
 		//Sets the update Timer to call every 5ms
 		SetTimer(hwnd, ID_TIMER_UPDATE, 10, NULL);

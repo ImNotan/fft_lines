@@ -10,6 +10,9 @@
 #include "global.h"
 #include "serial.h"
 
+//Function from drawBar2D.cpp
+void    CreateBarBrush();
+
 #define IDC_LEFT_BARCOUNT_LABEL			(HMENU)1000
 #define IDC_RIGHT_BARCOUNT_LABEL		(HMENU)1001
 #define IDC_SLIDER_BARCOUNT				(HMENU)1002
@@ -41,6 +44,7 @@ BARINFO* bar;
 HBRUSH barBrush[255];
 unsigned int rgb[3] = { 0,0,0 };
 
+double* pGradients = &plasma;
 
 bool border = false;
 bool background = true;
@@ -82,6 +86,7 @@ void setVariable(char* value, int variableNumber)
 
 	case 2:
 		colorSel = _atoi64(value);
+		setColor();
 		break;
 
 	case 3:
@@ -142,12 +147,6 @@ void readSettings()
 			}
 		}
 	}
-
-	for (int i = 0; i < 255; i++)
-	{
-		setColor(i, rgb);
-		barBrush[i] = CreateSolidBrush(RGB(rgb[0], rgb[1], rgb[2]));
-	}
 }
 
 void writeSettings()
@@ -163,46 +162,28 @@ void writeSettings()
 	WriteFile(hSettingsFile, str, 1000, NULL, NULL);
 }
 
-void setColor(unsigned int floatBetweenZeroAndOne, int* rgb)
+void setColor()
 {
 	switch (colorSel)
 	{
 	case 0:
-		rgb[0] = (unsigned int)(plasma[(unsigned int)(floatBetweenZeroAndOne)][0] * 255);
-		rgb[1] = (unsigned int)(plasma[(unsigned int)(floatBetweenZeroAndOne)][1] * 255);
-		rgb[2] = (unsigned int)(plasma[(unsigned int)(floatBetweenZeroAndOne)][2] * 255);
+		pGradients = &plasma;
 		break;
 	case 1:
-		rgb[0] = (unsigned int)(magma[(unsigned int)(floatBetweenZeroAndOne)][0] * 255);
-		rgb[1] = (unsigned int)(magma[(unsigned int)(floatBetweenZeroAndOne)][1] * 255);
-		rgb[2] = (unsigned int)(magma[(unsigned int)(floatBetweenZeroAndOne)][2] * 255);
+		pGradients = &magma;
 		break;
 	case 2:
-		rgb[0] = (unsigned int)(inferno[(unsigned int)(floatBetweenZeroAndOne)][0] * 255);
-		rgb[1] = (unsigned int)(inferno[(unsigned int)(floatBetweenZeroAndOne)][1] * 255);
-		rgb[2] = (unsigned int)(inferno[(unsigned int)(floatBetweenZeroAndOne)][2] * 255);
+		pGradients = &inferno;
 		break;
 	case 3:
-		rgb[0] = (unsigned int)(viridis[(unsigned int)(floatBetweenZeroAndOne)][0] * 255);
-		rgb[1] = (unsigned int)(viridis[(unsigned int)(floatBetweenZeroAndOne)][1] * 255);
-		rgb[2] = (unsigned int)(viridis[(unsigned int)(floatBetweenZeroAndOne)][2] * 255);
+		pGradients = &viridis;
 		break;
 	case 4:
-		rgb[0] = (unsigned int)(cividis[(unsigned int)(floatBetweenZeroAndOne)][0] * 255);
-		rgb[1] = (unsigned int)(cividis[(unsigned int)(floatBetweenZeroAndOne)][1] * 255);
-		rgb[2] = (unsigned int)(cividis[(unsigned int)(floatBetweenZeroAndOne)][2] * 255);
+		pGradients = &cividis;
 		break;
 	case 5:
-		rgb[0] = (unsigned int)(twilight[(unsigned int)(floatBetweenZeroAndOne * 2)][0] * 255);
-		rgb[1] = (unsigned int)(twilight[(unsigned int)(floatBetweenZeroAndOne * 2)][1] * 255);
-		rgb[2] = (unsigned int)(twilight[(unsigned int)(floatBetweenZeroAndOne * 2)][2] * 255);
+		pGradients = &turbo;
 		break;
-	case 6:
-		rgb[0] = (unsigned int)(turbo[(unsigned int)(floatBetweenZeroAndOne)][0] * 255);
-		rgb[1] = (unsigned int)(turbo[(unsigned int)(floatBetweenZeroAndOne)][1] * 255);
-		rgb[2] = (unsigned int)(turbo[(unsigned int)(floatBetweenZeroAndOne)][2] * 255);
-		break;
-
 	}
 }
 
@@ -289,17 +270,17 @@ BOOL CALLBACK SettingsDlgProc(HWND hwnd, UINT Message, WPARAM wParam, LPARAM lPa
 			50, 100, 150, 150, hwnd, IDC_COMBO_COLORS, NULL,
 			NULL);
 
-		TCHAR Planets[7][10] =
+		TCHAR Planets[6][10] =
 		{
 			TEXT("Plasma"), TEXT("Magma"), TEXT("Inferno"), TEXT("Viridis"),
-			TEXT("Cividis"), TEXT("Twilight"), TEXT("Turbo")
+			TEXT("Cividis"), TEXT("Turbo")
 		};
 
 		TCHAR A[16];
 		int  k = 0;
 
 		memset(&A, 0, sizeof(A));
-		for (k = 0; k <= 6; k += 1)
+		for (k = 0; k < 6; k += 1)
 		{
 			wcscpy_s(A, sizeof(A) / sizeof(TCHAR), (TCHAR*)Planets[k]);
 
@@ -414,11 +395,8 @@ BOOL CALLBACK SettingsDlgProc(HWND hwnd, UINT Message, WPARAM wParam, LPARAM lPa
 
 				DeleteObject(barBrush);
 
-				for (int i = 0; i < 255; i++)
-				{
-					setColor(i, &rgb);
-					barBrush[i] = CreateSolidBrush(RGB(rgb[0], rgb[1], rgb[2]));
-				}
+				setColor();
+				CreateBarBrush();
 			}
 			break;
 			}
