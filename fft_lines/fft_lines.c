@@ -13,7 +13,6 @@
 #include "global.h"
 #include "fft_calculate.h"
 #include "settings.h"
-#include "drawbar.h"
 #include "DeviceSel.h"
 #include "showerror.h"
 #include "sgfilter.h"
@@ -263,11 +262,6 @@ LRESULT CALLBACK WndProc(HWND hwnd, UINT msg, WPARAM wParam, LPARAM lParam)
 		break;
 	case WM_DESTROY:
 		DiscardGraphicsResources();
-		//Free Device Context used by Drawbar
-		DeleteObject(globalhbmBuffer);
-		ReleaseDC(hwnd, globalhdc);
-		DeleteDC(globalhdcBuffer);
-		DeleteObject(barBrush);
 
 		//memory
 		free(bar);

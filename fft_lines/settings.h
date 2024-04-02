@@ -38,10 +38,6 @@ extern LRESULT colorSel;
 extern int barCount;
 extern BARINFO* bar;
 
-extern HBRUSH barBrush[255];
-extern unsigned int rgb[3];
-
-
 extern bool border;
 extern bool background;
 extern bool gradient;

@@ -410,8 +410,6 @@ BOOL CALLBACK SettingsDlgProc(HWND hwnd, UINT Message, WPARAM wParam, LPARAM lPa
 				colorSel = SendMessageW((HWND)lParam, (UINT)CB_GETCURSEL,
 					(WPARAM)0, (LPARAM)0);
 
-				DeleteObject(barBrush);
-
 				setColor();
 				CreateBarBrush();
 			}
