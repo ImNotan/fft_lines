@@ -118,7 +118,7 @@
     <Link>
       <SubSystem>Windows</SubSystem>
       <GenerateDebugInformation>true</GenerateDebugInformation>
-      <AdditionalDependencies>comctl32.lib;Winmm.lib;libfftw3f-3.lib;shlwapi.lib;Msimg32.lib;%(AdditionalDependencies)</AdditionalDependencies>
+      <AdditionalDependencies>d2d1.lib;comctl32.lib;Winmm.lib;libfftw3f-3.lib;shlwapi.lib;Msimg32.lib;%(AdditionalDependencies)</AdditionalDependencies>
       <AdditionalLibraryDirectories>$(ProjectDir)fftw\lib;%(AdditionalLibraryDirectories)</AdditionalLibraryDirectories>
     </Link>
     <PostBuildEvent>
@@ -151,6 +151,7 @@
   <ItemGroup>
     <ClCompile Include="DeviceSel.c" />
     <ClCompile Include="drawbar.c" />
+    <ClCompile Include="drawBar2D.cpp" />
     <ClCompile Include="fft_calculate.c" />
     <ClCompile Include="fft_lines.c" />
     <ClCompile Include="serial.c" />

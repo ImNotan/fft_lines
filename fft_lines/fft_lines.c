@@ -18,13 +18,19 @@
 #include "showerror.h"
 #include "sgfilter.h"
 
-//Define .cpp functions for audio recording with WASAPI
+//Define wasapi_audio.cpp functions for audio recording with WASAPI
 HRESULT initializeRecording();
-void uninitializeRecording();
+void	uninitializeRecording();
 HRESULT GetAudioBuffer(int16_t* buffer, BOOL* bdone);
 HRESULT startRecording();
-void Exit();
-void getWaveFormat(WAVEFORMATEX* waveformat);
+void	Exit();
+void	getWaveFormat(WAVEFORMATEX* waveformat);
+
+//Define drawBar2D.cpp functions for drawing on screen with Direct2D
+void    DiscardGraphicsResources();
+void    OnPaint(HWND hwnd, int frameRate);
+HRESULT PaintStart();
+void	Resize(HWND hwnd, DWORD nSamplesPerSec);
 
 const char g_szClassName[] = "myWindowClass";
 
@@ -38,14 +44,11 @@ HWND globalhwnd;
 //Audio Buffer
 int16_t largeBuffer[2048];
 
+//average frame rate calculation variables
 #define MAXSAMPLES 100
 int tickindex = 0;
 int ticksum = 0;
 int ticklist[MAXSAMPLES];
-
-SYSTEMTIME start, stop;
-FILETIME startF, stopF;
-ULARGE_INTEGER startI, stopI;
 
 LARGE_INTEGER StartingTime, EndingTime, ElapsedMicroseconds;
 LARGE_INTEGER Frequency;
@@ -69,6 +72,9 @@ LRESULT CALLBACK WndProc(HWND hwnd, UINT msg, WPARAM wParam, LPARAM lParam)
 	{
 	case WM_CREATE:
 	{
+		//Initialize Factories in drawBar2D.cpp
+		PaintStart();
+
 		//Look if User wants Serial and if it is connected
 		if (ignoreSerial)
 			doSerial = false;
@@ -80,10 +86,11 @@ LRESULT CALLBACK WndProc(HWND hwnd, UINT msg, WPARAM wParam, LPARAM lParam)
 			ticklist[i] = 0;
 		}
 		
+		//Initialize high frequency counter for frame rate calculation
 		QueryPerformanceFrequency(&Frequency);
 		QueryPerformanceCounter(&StartingTime);
 
-		//Looks for settings and applies them
+		//Looks for settings file and applies them
 		initializeSettingsFile(hwnd);
 		readSettings();
 
@@ -94,44 +101,15 @@ LRESULT CALLBACK WndProc(HWND hwnd, UINT msg, WPARAM wParam, LPARAM lParam)
 		initializeRecording();
 		startRecording();
 
-		//Sets the update Timer to call every 5ms
-		if (SetTimer(hwnd, ID_TIMER_UPDATE, 1, NULL) == 0)
-		{
-			MessageBox(hwnd, L"Could not SetTimer()", L"Error", MB_OK | MB_ICONINFORMATION);
-		}
-		//SetTimer(hwnd, ID_TIMER_UPDATE2, 1, NULL);
+		//Initializes graphics resources in drawBar2D.cpp
+		OnPaint(hwnd, 1);
+
+		//Sets the update Timer to call every 10ms
+		SetTimer(hwnd, ID_TIMER_UPDATE, 10, NULL);
 	}
 	break;
 	case WM_TIMER:
 	{
-		QueryPerformanceCounter(&EndingTime);
-		ElapsedMicroseconds.QuadPart = EndingTime.QuadPart - StartingTime.QuadPart;
-
-		ElapsedMicroseconds.QuadPart *= 1000000;
-		ElapsedMicroseconds.QuadPart /= Frequency.QuadPart;
-
-		double averageTick = CalcAverageTick((int)(ElapsedMicroseconds.QuadPart));
-		frameRate = 1000000 / averageTick;
-
-		RECT windowRect;
-
-		GetClientRect(hwnd, &windowRect);
-
-		RECT textRect;
-
-		textRect.top = windowRect.bottom;
-		textRect.bottom = windowRect.bottom - bottomBarHeihgt;
-		textRect.right = windowRect.left + 100;
-		textRect.left = windowRect.left;
-
-		wchar_t buffer[10];
-		wsprintfW(buffer, L"%d", (int)frameRate);
-
-		DrawTextW(globalhdc, buffer, 10, &textRect, DT_LEFT | DT_VCENTER | DT_SINGLELINE);
-
-
-		QueryPerformanceCounter(&StartingTime);
-
 		BOOL bdone = false;
 		GetAudioBuffer(&largeBuffer, &bdone);
 
@@ -173,9 +151,6 @@ LRESULT CALLBACK WndProc(HWND hwnd, UINT msg, WPARAM wParam, LPARAM lParam)
 				SendMessageW(hwnd, WM_DESTROY, NULL, NULL);
 			}
 
-			//smoothing with Savitzky-Golay
-			//SGS_smothing();
-
 			//Prints to serial
 			if (bar[led_bar].height >= 0 && doSerial)
 			{
@@ -185,7 +160,20 @@ LRESULT CALLBACK WndProc(HWND hwnd, UINT msg, WPARAM wParam, LPARAM lParam)
 			}
 
 			//Draws bars on screen
-			DrawBar();
+			//DrawBar();
+
+			QueryPerformanceCounter(&EndingTime);
+			ElapsedMicroseconds.QuadPart = EndingTime.QuadPart - StartingTime.QuadPart;
+
+			ElapsedMicroseconds.QuadPart *= 1000000;
+			ElapsedMicroseconds.QuadPart /= Frequency.QuadPart;
+
+			double averageTick = CalcAverageTick((int)(ElapsedMicroseconds.QuadPart));
+			frameRate = 1000000 / averageTick;
+
+			QueryPerformanceCounter(&StartingTime);
+
+			OnPaint(hwnd, frameRate);
 		}
 	}
 	break;
@@ -230,47 +218,11 @@ LRESULT CALLBACK WndProc(HWND hwnd, UINT msg, WPARAM wParam, LPARAM lParam)
 		break;
 	case WM_SIZE:
 	{
-		HDC hdc = GetDC(hwnd);
-
-		DeleteDC(globalhdcBuffer);
-		ReleaseDC(hwnd, globalhdc);
-		globalhdc = GetDC(hwnd);
-		globalhdcBuffer = CreateCompatibleDC(globalhdc);
-
 		RECT windowRect;
-
 		GetClientRect(hwnd, &windowRect);
-
-		//adjusts the window size for the bottomBar in which the frequencies are displayed
-		windowRect.top = windowRect.bottom - bottomBarHeihgt;
-
-		globalhbmBuffer = CreateCompatibleBitmap(globalhdc, windowRect.right, windowRect.bottom);
-
-		//sets bottombar to gray
-		FillRect(hdc, &windowRect, GetStockObject(DKGRAY_BRUSH));
-		FrameRect(hdc, &windowRect, GetStockObject(BLACK_BRUSH));
-
-		SetBkMode(hdc, TRANSPARENT);
-		SetTextColor(hdc, RGB(255, 255, 255));
-		RECT textRect;
 		//Get information about audio stream
 		WAVEFORMATEX wfx;
 		getWaveFormat(&wfx);
-
-		for (int i = 0; i < 10; i++)
-		{
-			textRect.top = windowRect.bottom;
-			textRect.bottom = windowRect.bottom - bottomBarHeihgt;
-			textRect.left = i * (windowRect.right / 10);
-			textRect.right = i * (windowRect.right / 10) + (windowRect.right / 10);
-
-			//Gets frequencies from audio function
-			int freq = (i * (barCount / 10) + (barCount / 20)) * (wfx.nSamplesPerSec / N);
-			wchar_t buffer[11];
-			wsprintfW(buffer, L"%dHz ", freq);
-
-			DrawText(hdc, buffer, 7, &textRect, DT_CENTER | DT_VCENTER | DT_SINGLELINE);
-		}
 
 		//set new size of bars
 		if (barCount > 0)
@@ -297,7 +249,7 @@ LRESULT CALLBACK WndProc(HWND hwnd, UINT msg, WPARAM wParam, LPARAM lParam)
 			}
 		}
 
-		ReleaseDC(hwnd, hdc);
+		Resize(hwnd, wfx.nSamplesPerSec);
 	}
 	break;
 	case WM_GETMINMAXINFO:
@@ -312,6 +264,7 @@ LRESULT CALLBACK WndProc(HWND hwnd, UINT msg, WPARAM wParam, LPARAM lParam)
 		DestroyWindow(hwnd);
 		break;
 	case WM_DESTROY:
+		DiscardGraphicsResources();
 		//Free Device Context used by Drawbar
 		DeleteObject(globalhbmBuffer);
 		ReleaseDC(hwnd, globalhdc);

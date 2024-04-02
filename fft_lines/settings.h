@@ -3,8 +3,8 @@
 
 extern HWND SettingsDlg;
 extern BOOL CALLBACK SettingsDlgProc(HWND hwnd, UINT Message, WPARAM wParam, LPARAM lParam);
-extern void setColor(unsigned int floatBetweenZeoAndOne, int* rgb);
 extern void initializeSettingsFile(HWND hwnd);
+extern void setColor();
 extern void readSettings();
 extern void writeSettings();
 
@@ -32,3 +32,5 @@ extern bool ignoreSerial;
 
 extern const int bottomBarHeihgt;
 extern const int led_bar;
+
+extern double* pGradients;
