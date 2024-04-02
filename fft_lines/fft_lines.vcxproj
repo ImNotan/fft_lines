@@ -161,7 +161,6 @@
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="DeviceSel.h" />
-    <ClInclude Include="drawbar.h" />
     <ClInclude Include="fft_calculate.h" />
     <ClInclude Include="global.h" />
     <ClInclude Include="resource.h" />

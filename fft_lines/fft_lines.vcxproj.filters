@@ -62,9 +62,6 @@
     <ClInclude Include="fft_calculate.h">
       <Filter>Header Files</Filter>
     </ClInclude>
-    <ClInclude Include="drawbar.h">
-      <Filter>Header Files</Filter>
-    </ClInclude>
     <ClInclude Include="DeviceSel.h">
       <Filter>Header Files</Filter>
     </ClInclude>
