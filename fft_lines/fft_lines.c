@@ -95,14 +95,14 @@ LRESULT CALLBACK WndProc(HWND hwnd, UINT msg, WPARAM wParam, LPARAM lParam)
 		startRecording();
 
 		//Sets the update Timer to call every 5ms
-		//if (SetTimer(hwnd, ID_TIMER_UPDATE, 1, NULL) == 0)
-		//{
-		//	MessageBox(hwnd, L"Could not SetTimer()", L"Error", MB_OK | MB_ICONINFORMATION);
-		//}
+		if (SetTimer(hwnd, ID_TIMER_UPDATE, 1, NULL) == 0)
+		{
+			MessageBox(hwnd, L"Could not SetTimer()", L"Error", MB_OK | MB_ICONINFORMATION);
+		}
 		//SetTimer(hwnd, ID_TIMER_UPDATE2, 1, NULL);
 	}
 	break;
-	case WM_PAINT:
+	case WM_TIMER:
 	{
 		QueryPerformanceCounter(&EndingTime);
 		ElapsedMicroseconds.QuadPart = EndingTime.QuadPart - StartingTime.QuadPart;
