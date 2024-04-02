@@ -33,9 +33,6 @@
     <ClCompile Include="DeviceSel.c">
       <Filter>Source Files</Filter>
     </ClCompile>
-    <ClCompile Include="sgfilter.c">
-      <Filter>Source Files</Filter>
-    </ClCompile>
     <ClCompile Include="showerror.c">
       <Filter>Source Files</Filter>
     </ClCompile>
@@ -63,9 +60,6 @@
       <Filter>Header Files</Filter>
     </ClInclude>
     <ClInclude Include="DeviceSel.h">
-      <Filter>Header Files</Filter>
-    </ClInclude>
-    <ClInclude Include="sgfilter.h">
       <Filter>Header Files</Filter>
     </ClInclude>
     <ClInclude Include="showerror.h">

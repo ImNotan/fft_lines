@@ -15,7 +15,6 @@
 #include "settings.h"
 #include "DeviceSel.h"
 #include "showerror.h"
-#include "sgfilter.h"
 
 //Define wasapi_audio.cpp functions for audio recording with WASAPI
 HRESULT initializeRecording();
