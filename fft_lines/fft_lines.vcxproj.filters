@@ -21,9 +21,6 @@
     <ClCompile Include="serial.c">
       <Filter>Source Files</Filter>
     </ClCompile>
-    <ClCompile Include="drawbar.c">
-      <Filter>Source Files</Filter>
-    </ClCompile>
     <ClCompile Include="settings.c">
       <Filter>Source Files</Filter>
     </ClCompile>

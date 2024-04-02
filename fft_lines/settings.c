@@ -13,6 +13,7 @@
 //Function from drawBar2D.cpp
 void    CreateBarBrush();
 
+//Define Controls
 #define IDC_LEFT_BARCOUNT_LABEL			(HMENU)1000
 #define IDC_RIGHT_BARCOUNT_LABEL		(HMENU)1001
 #define IDC_SLIDER_BARCOUNT				(HMENU)1002
@@ -29,32 +30,35 @@ void    CreateBarBrush();
 
 #define IDC_COMBO_COLORS				(HMENU)1020
 
+//Define handles
 HWND hBarcountSlider;
 HWND hZoomSlider;
 HWND hwndComboBox;
 
 HWND SettingsDlg = NULL;
 
-float zoom = 0.0001f;
-LRESULT colorSel = 0;
+HANDLE hSettingsFile;
 
-int barCount = 500;
+//Allocated in fft_lines.c
 BARINFO* bar;
 
-HBRUSH barBrush[255];
-unsigned int rgb[3] = { 0,0,0 };
-
+//Pointer to color gradient used in drawBar2D.cpp - CreateBarBrush
 double* pGradients = &plasma;
 
-bool border = false;
-bool background = true;
-bool gradient = true;
-bool ignoreSerial = true;
+//Initialize variables with standard values
+float zoom = DEFAULT_ZOOM;
+LRESULT colorSel = DEFAULT_COLORSEL;
 
-const int bottomBarHeihgt = 30;
-const int led_bar = 4;
+int barCount = DEFAULT_BARCOUNT;
 
-HANDLE hSettingsFile;
+bool border = DEFAULT_BORDER;
+bool background = DEFAULT_BACKGROUND;
+bool gradient = DEFAULT_GRADIENT;
+bool ignoreSerial = DEFAULT_IGNORESERIAL;
+
+const int bottomBarHeihgt = DEFAULT_BOTTOMBARHEIGHT;
+//Which Bar gets printed to Serial
+const int led_bar = DEFAULT_LEDBAR;
 
 //Creates Settings file for saving settings
 void initializeSettingsFile(HWND hwnd)
@@ -76,34 +80,48 @@ void setVariable(char* value, int variableNumber)
 {
 	switch (variableNumber)
 	{
-	case 0:
-		barCount = atoi(value);
-		break;
+		case 0:
+			barCount = atoi(value);
+			if (barCount < MIN_BARCOUNT || barCount > MAX_BARCOUNT)
+				barCount = DEFAULT_BARCOUNT;
+			break;
 
-	case 1:
-		zoom = (float)atof(value);
-		break;
+		case 1:
+			zoom = (float)atof(value);
+			if (zoom < MIN_ZOOM || zoom > MAX_ZOOM)
+				zoom = DEFAULT_ZOOM;
+			break;
 
-	case 2:
-		colorSel = _atoi64(value);
-		setColor();
-		break;
+		case 2:
+			colorSel = _atoi64(value);
+			if (colorSel < 0 || colorSel >= NUMOF_GRADIENTS)
+				colorSel = DEFAULT_COLORSEL;
+			setColor();
+			break;
 
-	case 3:
-		border = atoi(value);
-		break;
+		case 3:
+			border = atoi(value);
+			if (border < 0 || border > 1)
+				border = DEFAULT_BORDER;
+			break;
 
-	case 4:
-		background = atoi(value);
-		break;
+		case 4:
+			background = atoi(value);
+			if (background < 0 || background > 1)
+				background = DEFAULT_BACKGROUND;
+			break;
 
-	case 5:
-		gradient = atoi(value);
-		break;
+		case 5:
+			gradient = atoi(value);
+			if (gradient < 0 || gradient > 1)
+				gradient = DEFAULT_GRADIENT;
+			break;
 	
-	case 6:
-		ignoreSerial = atoi(value);
-		break;
+		case 6:
+			ignoreSerial = atoi(value);
+			if (ignoreSerial < 0 || ignoreSerial > 1)
+				ignoreSerial = DEFAULT_IGNORESERIAL;
+			break;
 	}
 }
 
@@ -157,7 +175,6 @@ void writeSettings()
 	SetFilePointerEx(hSettingsFile, move, NULL, FILE_BEGIN);
 
 	char str[1000];
-	float floatingpoint = 0.1f;
 	sprintf_s(str, 1000, ";%d;;%0.6ff;;%I64d;;%d;;%d;;%d;;&d;;%d", barCount, zoom, colorSel, border, background, gradient, ignoreSerial);
 	WriteFile(hSettingsFile, str, 1000, NULL, NULL);
 }
@@ -233,7 +250,7 @@ BOOL CALLBACK SettingsDlgProc(HWND hwnd, UINT Message, WPARAM wParam, LPARAM lPa
 		if (ignoreSerial)
 			SendMessageW(ButtonIgnoreSerial, BM_SETCHECK, BST_CHECKED, 0);
 
-		WCHAR strBarCount[4];
+		WCHAR strBarCount[5];
 		wsprintfW(strBarCount, L"%d", barCount);
 		HWND EditBars = CreateWindowW(L"Edit", strBarCount,
 			WS_CHILD | WS_VISIBLE, 535, 20, 30, 15, hwnd, IDC_EDIT_BARCOUNT, NULL, NULL);

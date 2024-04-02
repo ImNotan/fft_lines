@@ -159,9 +159,6 @@ LRESULT CALLBACK WndProc(HWND hwnd, UINT msg, WPARAM wParam, LPARAM lParam)
 				WriteSerial(line, globalhwnd);
 			}
 
-			//Draws bars on screen
-			//DrawBar();
-
 			QueryPerformanceCounter(&EndingTime);
 			ElapsedMicroseconds.QuadPart = EndingTime.QuadPart - StartingTime.QuadPart;
 
@@ -220,6 +217,7 @@ LRESULT CALLBACK WndProc(HWND hwnd, UINT msg, WPARAM wParam, LPARAM lParam)
 	{
 		RECT windowRect;
 		GetClientRect(hwnd, &windowRect);
+
 		//Get information about audio stream
 		WAVEFORMATEX wfx;
 		getWaveFormat(&wfx);

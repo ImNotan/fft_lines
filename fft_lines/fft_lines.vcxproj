@@ -150,7 +150,6 @@
   </ItemDefinitionGroup>
   <ItemGroup>
     <ClCompile Include="DeviceSel.c" />
-    <ClCompile Include="drawbar.c" />
     <ClCompile Include="drawBar2D.cpp" />
     <ClCompile Include="fft_calculate.c" />
     <ClCompile Include="fft_lines.c" />
