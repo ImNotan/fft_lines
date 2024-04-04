@@ -14,7 +14,7 @@ HRESULT ChangeAudioStream(unsigned int deviceNumber);
 
 HWND DeviceSelDlg = NULL;
 
-BOOL CALLBACK DeviceSelProc(HWND hwnd, UINT Message, WPARAM wParam, LPARAM lParam)
+LRESULT CALLBACK DeviceSelProc(HWND hwnd, UINT Message, WPARAM wParam, LPARAM lParam)
 {
 	switch (Message)
 	{

@@ -14,16 +14,18 @@
 #define DEFAULT_BACKGROUND 1
 #define DEFAULT_GRADIENT 1
 #define DEFAULT_IGNORESERIAL 1
+#define DEFAULT_CIRCLE 0
 
 #define DEFAULT_BOTTOMBARHEIGHT 30
 #define DEFAULT_LEDBAR 4
 
 extern HWND SettingsDlg;
-extern BOOL CALLBACK SettingsDlgProc(HWND hwnd, UINT Message, WPARAM wParam, LPARAM lParam);
+extern LRESULT CALLBACK SettingsDlgProc(HWND hwnd, UINT Message, WPARAM wParam, LPARAM lParam);
 extern void initializeSettingsFile(HWND hwnd);
 extern void setColor();
 extern void readSettings();
 extern void writeSettings();
+extern void ResizeBars(HWND hwnd);
 
 typedef struct _BARINFO
 {
@@ -42,6 +44,7 @@ extern bool border;
 extern bool background;
 extern bool gradient;
 extern bool ignoreSerial;
+extern bool circle;
 
 extern const int bottomBarHeihgt;
 extern const int led_bar;

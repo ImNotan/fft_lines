@@ -167,6 +167,7 @@
     <ClInclude Include="settings.h" />
     <ClInclude Include="showerror.h" />
     <ClInclude Include="variables.h" />
+    <ClInclude Include="wasapi_audio.h" />
   </ItemGroup>
   <ItemGroup>
     <ResourceCompile Include="fft_lines.rc" />

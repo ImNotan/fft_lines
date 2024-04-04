@@ -22,13 +22,12 @@ void	uninitializeRecording();
 HRESULT GetAudioBuffer(int16_t* buffer, BOOL* bdone);
 HRESULT startRecording();
 void	Exit();
-void	getWaveFormat(WAVEFORMATEX* waveformat);
 
 //Define drawBar2D.cpp functions for drawing on screen with Direct2D
 void    DiscardGraphicsResources();
 void    OnPaint(HWND hwnd, int frameRate);
 HRESULT PaintStart();
-void	Resize(HWND hwnd, DWORD nSamplesPerSec);
+void	Resize(HWND hwnd);
 
 const char g_szClassName[] = "myWindowClass";
 
@@ -214,39 +213,9 @@ LRESULT CALLBACK WndProc(HWND hwnd, UINT msg, WPARAM wParam, LPARAM lParam)
 		break;
 	case WM_SIZE:
 	{
-		RECT windowRect;
-		GetClientRect(hwnd, &windowRect);
+		ResizeBars(hwnd);
 
-		//Get information about audio stream
-		WAVEFORMATEX wfx;
-		getWaveFormat(&wfx);
-
-		//set new size of bars
-		if (barCount > 0)
-		{
-			//For every bar set width
-			for (int i = 0; i < barCount; i++)
-			{
-				bar[i].width = (unsigned int)((windowRect.right / barCount) + 1);
-				bar[i].x = i * (bar[i].width - 1);
-			}
-
-			//Calculates how many bar have to be larger
-			//Shifts bar to the right by how many bars already made bigger
-			for (int i = 0; i < windowRect.right % barCount; i++)
-			{
-				bar[i].width += 1;
-				bar[i].x += i;
-			}
-
-			//Shifts all bars that weren't made larger to the right
-			for (int i = windowRect.right % barCount; i < barCount; i++)
-			{
-				bar[i].x += windowRect.right % barCount;
-			}
-		}
-
-		Resize(hwnd, wfx.nSamplesPerSec);
+		Resize(hwnd);
 	}
 	break;
 	case WM_GETMINMAXINFO:
@@ -255,6 +224,11 @@ LRESULT CALLBACK WndProc(HWND hwnd, UINT msg, WPARAM wParam, LPARAM lParam)
 		LPMINMAXINFO lpMMI = (LPMINMAXINFO)lParam;
 		lpMMI->ptMinTrackSize.x = 960;
 		lpMMI->ptMinTrackSize.y = 480;
+	}
+	break;
+	case WM_ERROR:
+	{
+		MessageBoxW(hwnd, (WCHAR*)wParam, L"An Error has occured", MB_OK | MB_APPLMODAL | MB_ICONERROR);
 	}
 	break;
 	case WM_CLOSE:

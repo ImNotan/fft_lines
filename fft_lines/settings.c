@@ -12,6 +12,7 @@
 
 //Function from drawBar2D.cpp
 void    CreateBarBrush();
+void	Redraw(HWND hwnd);
 
 //Define Controls
 #define IDC_LEFT_BARCOUNT_LABEL			(HMENU)1000
@@ -27,6 +28,7 @@ void    CreateBarBrush();
 #define IDC_BUTTON_GRADIENT				(HMENU)1012
 #define IDC_BUTTON_CONNECTSERIAL		(HMENU)1013
 #define IDC_BUTTON_IGNORESERIAL			(HMENU)1014
+#define IDC_BUTTON_CIRCLE				(HMENU)1015
 
 #define IDC_COMBO_COLORS				(HMENU)1020
 
@@ -55,6 +57,7 @@ bool border = DEFAULT_BORDER;
 bool background = DEFAULT_BACKGROUND;
 bool gradient = DEFAULT_GRADIENT;
 bool ignoreSerial = DEFAULT_IGNORESERIAL;
+bool circle = DEFAULT_CIRCLE;
 
 const int bottomBarHeihgt = DEFAULT_BOTTOMBARHEIGHT;
 //Which Bar gets printed to Serial
@@ -122,6 +125,12 @@ void setVariable(char* value, int variableNumber)
 			if (ignoreSerial < 0 || ignoreSerial > 1)
 				ignoreSerial = DEFAULT_IGNORESERIAL;
 			break;
+
+		case 7:
+			circle = atoi(value);
+			if (circle < 0 || circle > 1)
+				circle = DEFAULT_CIRCLE;
+			break;
 	}
 }
 
@@ -175,7 +184,7 @@ void writeSettings()
 	SetFilePointerEx(hSettingsFile, move, NULL, FILE_BEGIN);
 
 	char str[1000];
-	sprintf_s(str, 1000, ";%d;;%0.6ff;;%I64d;;%d;;%d;;%d;;&d;;%d", barCount, zoom, colorSel, border, background, gradient, ignoreSerial);
+	sprintf_s(str, 1000, ";%d;;%0.6ff;;%I64d;;%d;;%d;;%d;;%d;;%d;", barCount, zoom, colorSel, border, background, gradient, ignoreSerial, circle);
 	WriteFile(hSettingsFile, str, 1000, NULL, NULL);
 }
 
@@ -204,7 +213,41 @@ void setColor()
 	}
 }
 
-BOOL CALLBACK SettingsDlgProc(HWND hwnd, UINT Message, WPARAM wParam, LPARAM lParam)
+void ResizeBars(HWND hwnd)
+{
+	RECT windowRect;
+	GetClientRect(hwnd, &windowRect);
+
+	//Get information about audio stream
+
+
+	//set new size of bars
+	if (barCount > 0)
+	{
+		//For every bar set width
+		for (int i = 0; i < barCount; i++)
+		{
+			bar[i].width = (unsigned int)((windowRect.right / barCount) + 1);
+			bar[i].x = i * (bar[i].width - 1);
+		}
+
+		//Calculates how many bar have to be larger
+		//Shifts bar to the right by how many bars already made bigger
+		for (int i = 0; i < windowRect.right % barCount; i++)
+		{
+			bar[i].width += 1;
+			bar[i].x += i;
+		}
+
+		//Shifts all bars that weren't made larger to the right
+		for (int i = windowRect.right % barCount; i < barCount; i++)
+		{
+			bar[i].x += windowRect.right % barCount;
+		}
+	}
+}
+
+LRESULT CALLBACK SettingsDlgProc(HWND hwnd, UINT Message, WPARAM wParam, LPARAM lParam)
 {
 	switch (Message)
 	{
@@ -240,6 +283,12 @@ BOOL CALLBACK SettingsDlgProc(HWND hwnd, UINT Message, WPARAM wParam, LPARAM lPa
 
 		if(gradient)
 			SendMessageW(ButtonGradient, BM_SETCHECK, BST_CHECKED, 0);
+
+		HWND ButtonCircle = CreateWindowW(L"Button", L"Circle effect",
+			WS_CHILD | WS_VISIBLE | BS_AUTOCHECKBOX, 50, 200, 150, 15, hwnd, IDC_BUTTON_CIRCLE, NULL, NULL);
+
+		if (circle)
+			SendMessageW(ButtonCircle, BM_SETCHECK, BST_CHECKED, 0);
 
 		HWND ButtonConnectSerial = CreateWindowW(L"Button", L"Connect Serial",
 			WS_CHILD | WS_VISIBLE, 50, 250, 100, 20, hwnd, IDC_BUTTON_CONNECTSERIAL, NULL, NULL);
@@ -344,7 +393,7 @@ BOOL CALLBACK SettingsDlgProc(HWND hwnd, UINT Message, WPARAM wParam, LPARAM lPa
 									if (tmp)
 									{
 										bar = tmp;
-										SendMessageW(globalhwnd, WM_SIZE, 0, 0);
+										Redraw(globalhwnd);
 									}
 									else
 									{
@@ -384,7 +433,9 @@ BOOL CALLBACK SettingsDlgProc(HWND hwnd, UINT Message, WPARAM wParam, LPARAM lPa
 			if (tmp)
 			{
 				bar = tmp;
-				SendMessageW(globalhwnd, WM_SIZE, 0, 0);
+				ResizeBars(globalhwnd);
+				Redraw(globalhwnd);
+				//SendMessageW(globalhwnd, WM_SIZE, 0, 0);
 			}
 			else
 			{
@@ -401,6 +452,9 @@ BOOL CALLBACK SettingsDlgProc(HWND hwnd, UINT Message, WPARAM wParam, LPARAM lPa
 			break;
 		case IDC_BUTTON_GRADIENT:
 			gradient = !gradient;
+			break;
+		case IDC_BUTTON_CIRCLE:
+			circle = !circle;
 			break;
 		case IDC_COMBO_COLORS:
 			switch (HIWORD(wParam))
@@ -425,7 +479,9 @@ BOOL CALLBACK SettingsDlgProc(HWND hwnd, UINT Message, WPARAM wParam, LPARAM lPa
 		if (tmp)
 		{
 			bar = tmp;
-			SendMessageW(globalhwnd, WM_SIZE, 0, 0);
+			ResizeBars(globalhwnd);
+			Redraw(globalhwnd);
+			//SendMessageW(globalhwnd, WM_SIZE, 0, 0);
 		}
 		else
 		{

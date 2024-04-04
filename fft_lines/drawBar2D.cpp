@@ -2,6 +2,8 @@
 #include <d2d1.h>
 #include <dwrite.h>
 
+#include "wasapi_audio.h"
+
 extern "C" 
 {
     #include "settings.h"
@@ -33,20 +35,28 @@ ID2D1SolidColorBrush* pbarBrushSolid[256];
 IDWriteTextFormat* pTextFormat;
 IDWriteFactory* pWriteFactory;
 
+D2D1_SIZE_U previousSize;
+D2D1_RECT_U previousWindowRect;
+
 extern "C" HRESULT CreateGraphicsResources(HWND hwnd);
 extern "C" void    DiscardGraphicsResources();
 extern "C" void    OnPaint(HWND hwnd, int frameRate);
 extern "C" HRESULT PaintStart();
-extern "C" void    Resize(HWND hwnd, DWORD nSamplesPerSec);
+extern "C" void    Resize(HWND hwnd);
 extern "C" void    CreateBarBrush();
-
+extern "C" void    Redraw(HWND hwnd);
 
 //Creates Factorys for Drawing
 //Called once in fft_lines.c - WndProc - WM_CREATE
 HRESULT PaintStart()
 {
-    DWriteCreateFactory(DWRITE_FACTORY_TYPE_SHARED, __uuidof(pWriteFactory), reinterpret_cast<IUnknown**>(&pWriteFactory));
-    pWriteFactory->CreateTextFormat(
+    previousSize = D2D1::SizeU(0, 0);
+    previousWindowRect = D2D1::RectU(0, 0, 0, 0);
+
+    HRESULT hr = S_OK;
+
+    hr = DWriteCreateFactory(DWRITE_FACTORY_TYPE_SHARED, __uuidof(pWriteFactory), reinterpret_cast<IUnknown**>(&pWriteFactory));
+    hr = pWriteFactory->CreateTextFormat(
         L"Verdana",
         NULL,
         DWRITE_FONT_WEIGHT_NORMAL,
@@ -56,12 +66,20 @@ HRESULT PaintStart()
         L"",
         &pTextFormat);
 
-    pTextFormat->SetTextAlignment(DWRITE_TEXT_ALIGNMENT_CENTER);
+    hr = pTextFormat->SetTextAlignment(DWRITE_TEXT_ALIGNMENT_CENTER);
 
-    pTextFormat->SetParagraphAlignment(DWRITE_PARAGRAPH_ALIGNMENT_CENTER);
+    hr = pTextFormat->SetParagraphAlignment(DWRITE_PARAGRAPH_ALIGNMENT_CENTER);
 
+    hr = D2D1CreateFactory(D2D1_FACTORY_TYPE_SINGLE_THREADED, &pFactory);
 
-    return D2D1CreateFactory(D2D1_FACTORY_TYPE_SINGLE_THREADED, &pFactory);
+    if (FAILED(hr) || hr == D2DERR_RECREATE_TARGET)
+    {
+        WCHAR message[23] = L"Failed to start paint";
+        SendMessageW(globalhwnd, WM_ERROR, (WPARAM)&message, NULL);
+        DiscardGraphicsResources();
+    }
+
+    return hr;
 }
 
 
@@ -90,7 +108,7 @@ void CreateBarBrush()
     }
 
     D2D1_COLOR_F color;
-    ID2D1GradientStopCollection* pGradientStops = NULL;
+    ID2D1GradientStopCollection* pGradientStops;
     D2D1_GRADIENT_STOP gradientStops[2];
     HRESULT hr = S_OK;
 
@@ -121,10 +139,19 @@ void CreateBarBrush()
 
         //Solid
         color = D2D1::ColorF((float)pGradients[j], (float)pGradients[j + 1], (float)pGradients[j + 2], 1.0f);
-        pRenderTarget->CreateSolidColorBrush(color, &pbarBrushSolid[i]);
+        hr = pRenderTarget->CreateSolidColorBrush(color, &pbarBrushSolid[i]);
 
         j += 3;
+
+        if (FAILED(hr) || hr == D2DERR_RECREATE_TARGET)
+        {
+            WCHAR message[24] = L"Failed to create brush";
+            SendMessageW(globalhwnd, WM_ERROR, (WPARAM)&message, NULL);
+            DiscardGraphicsResources();
+        }
     }
+
+    SafeRelease(&pGradientStops);
 }
 
 HRESULT CreateGraphicsResources(HWND hwnd)
@@ -156,6 +183,14 @@ HRESULT CreateGraphicsResources(HWND hwnd)
             CreateBarBrush();
         }
     }
+    
+    if (FAILED(hr) || hr == D2DERR_RECREATE_TARGET)
+    {
+        WCHAR message[37] = L"Failed to create graphics resources";
+        SendMessageW(globalhwnd, WM_ERROR, (WPARAM)&message, NULL);
+        DiscardGraphicsResources();
+    }
+
     return hr;
 }
 
@@ -184,7 +219,7 @@ void DrawBackground(RECT windowRect)
     else
     {
         D2D1_RECT_F backgroundRect = D2D1::RectF(windowRect.left, windowRect.top, windowRect.right, windowRect.bottom);
-        pBrush->SetColor(D2D1::ColorF(0.4f, 0.4f, 0.4f));
+        pBrush->SetColor(D2D1::ColorF(0.3f, 0.3f, 0.3f));
         pRenderTarget->FillRectangle(&backgroundRect, pBrush);
     }
 }
@@ -192,23 +227,68 @@ void DrawBackground(RECT windowRect)
 void DrawBars(RECT windowRect)
 {
     D2D1_RECT_F barRect;
-    if (gradient)
+
+    //0bcg
+    switch (circle << 1 | gradient)
     {
-        for (int i = 0; i < barCount; i++)
+        case 0b00: //normal & no circle
         {
-            pbarBrushGradient[(unsigned int)((float)(((float)i / ((float)barCount - 1.0)) * 254.0))]->SetStartPoint(D2D1::Point2F(0, windowRect.bottom - bar[i].height));
-            pbarBrushGradient[(unsigned int)((float)(((float)i / ((float)barCount - 1.0)) * 254.0))]->SetEndPoint(D2D1::Point2F(0, windowRect.bottom));
-            barRect = D2D1::Rect(bar[i].x, (int)windowRect.bottom - bar[i].height, bar[i].x + bar[i].width, (int)windowRect.bottom);
-            pRenderTarget->FillRectangle(&barRect, pbarBrushGradient[(unsigned int)((float)(((float)i / ((float)barCount - 1.0)) * 254.0))]);
+            for (int i = 0; i < barCount; i++)
+            {
+                barRect = D2D1::Rect(bar[i].x, (int)windowRect.bottom - bar[i].height, bar[i].x + bar[i].width, (int)windowRect.bottom);
+                pRenderTarget->FillRectangle(&barRect, pbarBrushSolid[(unsigned int)((float)(((float)i / ((float)barCount - 1.0)) * 254.0))]);
+            }
         }
-    }
-    else
-    {
-        for (int i = 0; i < barCount; i++)
+        break;
+
+        case 0b01: //gradient & no circle
         {
-            barRect = D2D1::Rect(bar[i].x, (int)windowRect.bottom - bar[i].height, bar[i].x + bar[i].width, (int)windowRect.bottom);
-            pRenderTarget->FillRectangle(&barRect, pbarBrushSolid[(unsigned int)((float)(((float)i / ((float)barCount - 1.0)) * 254.0))]);
+            for (int i = 0; i < barCount; i++)
+            {
+                pbarBrushGradient[(unsigned int)((float)(((float)i / ((float)barCount - 1.0)) * 254.0))]->SetStartPoint(D2D1::Point2F(0, windowRect.bottom - bar[i].height));
+                pbarBrushGradient[(unsigned int)((float)(((float)i / ((float)barCount - 1.0)) * 254.0))]->SetEndPoint(D2D1::Point2F(0, windowRect.bottom));
+                barRect = D2D1::Rect(bar[i].x, (int)windowRect.bottom - bar[i].height, bar[i].x + bar[i].width, (int)windowRect.bottom);
+                pRenderTarget->FillRectangle(&barRect, pbarBrushGradient[(unsigned int)((float)(((float)i / ((float)barCount - 1.0)) * 254.0))]);
+            }
         }
+        break;
+
+        case 0b10: //no gradient & circle
+        {
+            float rotation = 0.0f;
+            int radius = 100;
+            for (int i = 0; i < barCount; i++)
+            {
+                pRenderTarget->SetTransform(D2D1::Matrix3x2F::Rotation(rotation, D2D1::Point2F(windowRect.right / 2, windowRect.bottom / 2)));
+                rotation += 360.0f / barCount;
+
+                barRect = D2D1::Rect(windowRect.right / 2 - 2, windowRect.bottom / 2 + radius + bar[i].height, windowRect.right / 2 + 2, windowRect.bottom / 2 + radius);
+                pRenderTarget->FillRectangle(&barRect, pbarBrushSolid[(unsigned int)((float)(((float)i / ((float)barCount - 1.0)) * 254.0))]);
+            }
+
+            pRenderTarget->SetTransform(D2D1::Matrix3x2F::Rotation(0.0f, D2D1::Point2F(0, 0)));
+        }
+        break;
+
+        case 0b11: //gradient & circle
+        {
+            float rotation = 0.0f;
+            int radius = 100;
+            for (int i = 0; i < barCount; i++)
+            {
+                pRenderTarget->SetTransform(D2D1::Matrix3x2F::Rotation(rotation, D2D1::Point2F(windowRect.right / 2, windowRect.bottom / 2)));
+                rotation += 360.0f / barCount;
+
+                pbarBrushGradient[(unsigned int)((float)(((float)i / ((float)barCount - 1.0)) * 254.0))]->SetStartPoint(D2D1::Point2F(windowRect.right / 2, windowRect.bottom / 2 + radius + bar[i].height));
+                pbarBrushGradient[(unsigned int)((float)(((float)i / ((float)barCount - 1.0)) * 254.0))]->SetEndPoint(D2D1::Point2F(windowRect.right / 2, windowRect.bottom / 2 + radius));
+
+                barRect = D2D1::Rect(windowRect.right / 2 - 2, windowRect.bottom / 2 + radius + bar[i].height, windowRect.right / 2 + 2, windowRect.bottom / 2 + radius);
+                pRenderTarget->FillRectangle(&barRect, pbarBrushGradient[(unsigned int)((float)(((float)i / ((float)barCount - 1.0)) * 254.0))]);
+            }
+
+            pRenderTarget->SetTransform(D2D1::Matrix3x2F::Rotation(0.0f, D2D1::Point2F(0, 0)));
+        }
+        break;
     }
 }
 
@@ -261,68 +341,103 @@ void OnPaint(HWND hwnd, int frameRate)
         }
 
         hr = pRenderTarget->EndDraw();
+
         if (FAILED(hr) || hr == D2DERR_RECREATE_TARGET)
         {
+            WCHAR message[22] = L"Failed to draw frame";
+            SendMessageW(globalhwnd, WM_ERROR, (WPARAM)&message, NULL);
             DiscardGraphicsResources();
         }
     }
 }
 
-void Resize(HWND hwnd, DWORD nSamplesPerSec)
+void Redraw(HWND hwnd)
+{
+    WAVEFORMATEX wfx;
+    getWaveFormat(&wfx);
+
+    HRESULT hr = S_OK;
+    RECT windowRect;
+    GetClientRect(hwnd, &windowRect);
+
+    pRenderTarget->BeginDraw();
+
+    //Same as in OnPaint() done here for new size (no flickering)
+    windowRect.bottom -= bottomBarHeihgt;
+
+    DrawBackground(windowRect);
+    DrawBars(windowRect);
+
+    //windowRect adjusted for bottom bar
+    windowRect.bottom += bottomBarHeihgt;
+    windowRect.top = windowRect.bottom - bottomBarHeihgt;
+
+    D2D1_RECT_F bottomBar = D2D1::Rect(windowRect.left, windowRect.top, windowRect.right, windowRect.bottom);
+
+    //Fill bottom bar
+    pBrush->SetColor(D2D1::ColorF(0.15f, 0.15f, 0.15f));
+    pRenderTarget->FillRectangle(bottomBar, pBrush);
+    //Border bottom bar
+    pBrush->SetColor(D2D1::ColorF(0, 0, 0));
+    pRenderTarget->DrawRectangle(bottomBar, pBrush);
+
+    D2D1_RECT_F textRect;
+    pBrush->SetColor(D2D1::ColorF(1.0f, 1.0f, 1.0f));
+
+    //Calculate frequency at 10 spots and displays them
+    for (int i = 0; i < 10; i++)
+    {
+        textRect = D2D1::Rect(i * (windowRect.right / 10), windowRect.bottom, i * (windowRect.right / 10) + (windowRect.right / 10), windowRect.bottom - bottomBarHeihgt);
+        int freq = (i * (barCount / 10) + (barCount / 20)) * (wfx.nSamplesPerSec / N);
+        wchar_t buffer[9] = L"        ";
+        wsprintfW(buffer, L"%dHz ", freq);
+        pRenderTarget->DrawTextW(buffer, 8, pTextFormat, textRect, pBrush);
+    }
+
+    hr = pRenderTarget->EndDraw();
+
+    if (FAILED(hr) || hr == D2DERR_RECREATE_TARGET)
+    {
+        WCHAR message[20] = L"Failed to redraw";
+        SendMessageW(globalhwnd, WM_ERROR, (WPARAM)&message, NULL);
+        DiscardGraphicsResources();
+    }
+}
+
+void Resize(HWND hwnd)
 {
     if (pRenderTarget != NULL)
     {
-        HRESULT hr;
+        HRESULT hr = S_OK;
         RECT windowRect;
         GetClientRect(hwnd, &windowRect);
+        D2D1_RECT_U windowRectU = D2D1::RectU(windowRect.left, windowRect.top, windowRect.right, windowRect.bottom);
 
         //Resize / Creation of resized Bitmap
         D2D1_SIZE_U size = D2D1::SizeU(windowRect.right, windowRect.bottom);
-        pRenderTarget->Resize(size);
+        hr = pRenderTarget->Resize(size);
+
+        ID2D1Bitmap* pPreviousBitmap;
+        D2D1_POINT_2U destPoint = D2D1::Point2U(0, 0);
+        hr = pRenderTarget->CreateBitmap(previousSize, D2D1::BitmapProperties(D2D1::PixelFormat(DXGI_FORMAT_B8G8R8A8_UNORM, D2D1_ALPHA_MODE_IGNORE)), &pPreviousBitmap);
+        hr = pPreviousBitmap->CopyFromBitmap(&destPoint, pBufferBitmap, &previousWindowRect);
 
         SafeRelease(&pBufferBitmap);
-        pRenderTarget->CreateBitmap(size, D2D1::BitmapProperties(D2D1::PixelFormat(DXGI_FORMAT_B8G8R8A8_UNORM, D2D1_ALPHA_MODE_IGNORE)), &pBufferBitmap);
+        hr = pRenderTarget->CreateBitmap(size, D2D1::BitmapProperties(D2D1::PixelFormat(DXGI_FORMAT_B8G8R8A8_UNORM, D2D1_ALPHA_MODE_IGNORE)), &pBufferBitmap);
 
-        pRenderTarget->BeginDraw();
-
-        //Same as in OnPaint() done here for new size (no flickering)
-        windowRect.bottom -= bottomBarHeihgt;
-
-        DrawBackground(windowRect);
-        DrawBars(windowRect);
-
-        //windowRect adjusted for bottom bar
-        windowRect.bottom += bottomBarHeihgt;
-        windowRect.top = windowRect.bottom - bottomBarHeihgt;
-
-        D2D1_RECT_F bottomBar = D2D1::Rect(windowRect.left, windowRect.top, windowRect.right, windowRect.bottom);
+        hr = pBufferBitmap->CopyFromBitmap(&destPoint, pPreviousBitmap, &windowRectU);
+        SafeRelease(&pPreviousBitmap);
         
-        //Fill bottom bar
-        pBrush->SetColor(D2D1::ColorF(0.15f, 0.15f, 0.15f));
-        pRenderTarget->FillRectangle(bottomBar, pBrush);
-        //Border bottom bar
-        pBrush->SetColor(D2D1::ColorF(0, 0, 0));
-        pRenderTarget->DrawRectangle(bottomBar, pBrush);
+        Redraw(hwnd);
 
-        D2D1_RECT_F textRect;
-        pBrush->SetColor(D2D1::ColorF(1.0f, 1.0f, 1.0f));
+        previousWindowRect = windowRectU;
+        previousSize = size;
 
-        //Calculate frequency at 10 spots and displays them
-        for (int i = 0; i < 10; i++)
-        {
-            textRect = D2D1::Rect(i * (windowRect.right / 10), windowRect.bottom, i * (windowRect.right / 10) + (windowRect.right / 10), windowRect.bottom - bottomBarHeihgt);
-            int freq = (i * (barCount / 10) + (barCount / 20)) * (nSamplesPerSec / N);
-            wchar_t buffer[9] = L"        ";
-            wsprintfW(buffer, L"%dHz ", freq);
-            pRenderTarget->DrawTextW(buffer, 8, pTextFormat, textRect, pBrush);
-        }
-
-        hr = pRenderTarget->EndDraw();
         if (FAILED(hr) || hr == D2DERR_RECREATE_TARGET)
         {
+            WCHAR message[20] = L"Failed to resize";
+            SendMessageW(globalhwnd, WM_ERROR, (WPARAM)&message, NULL);
             DiscardGraphicsResources();
         }
-        //CalculateLayout();
-        //InvalidateRect(hwnd, NULL, FALSE);
     }
 }

@@ -65,6 +65,9 @@
     <ClInclude Include="showerror.h">
       <Filter>Header Files</Filter>
     </ClInclude>
+    <ClInclude Include="wasapi_audio.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
   </ItemGroup>
   <ItemGroup>
     <ResourceCompile Include="fft_lines.rc">

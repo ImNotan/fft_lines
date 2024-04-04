@@ -8,6 +8,8 @@
 #include <strsafe.h>
 #include "global.h"
 
+#include "wasapi_audio.h"
+
 using namespace std;
 
 #pragma comment(lib, "Winmm.lib")
@@ -57,7 +59,6 @@ extern "C" HRESULT GetAudioBuffer(int16_t* buffer, BOOL* bdone);
 extern "C" HRESULT startRecording();
 extern "C" HRESULT stopRecording();
 extern "C" void Exit();
-extern "C" void getWaveFormat(WAVEFORMATEX * waveformat);
 extern "C" HRESULT getAudioDeviceCount(unsigned int* count);
 extern "C" HRESULT getAudioDeviceNames(unsigned int deviceNumber, wchar_t* deviceName);
 extern "C" HRESULT ChangeAudioStream(unsigned int deviceNumber);
