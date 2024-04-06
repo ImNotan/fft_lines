@@ -1,5 +1,7 @@
 #include <Windows.h>
 #include <stdio.h>
+#define _USE_MATH_DEFINES
+#include <math.h>
 #include <commctrl.h>
 #include <stdbool.h>
 #include <Shlwapi.h>
@@ -251,7 +253,7 @@ void ResizeBars(HWND hwnd)
 
 
 	//set new size of bars
-	if (barCount > 0)
+	if (barCount > 0 && windowRect.right > 1)
 	{
 		//For every bar set width
 		for (int i = 0; i < barCount; i++)
@@ -262,17 +264,46 @@ void ResizeBars(HWND hwnd)
 
 		//Calculates how many bar have to be larger
 		//Shifts bar to the right by how many bars already made bigger
-		for (int i = 0; i < windowRect.right % barCount; i++)
+		/*for (int i = 0; i < windowRect.right % barCount; i++)
 		{
 			bar[i].width += 1;
 			bar[i].x += i;
+		}*/
+
+		if (barCount == windowRect.right)
+			return;
+
+		int shift = 0;
+		float i;
+		for (i = 0; i < barCount; i += (float)barCount / (float)(windowRect.right % barCount))
+		{
+			if (shift > windowRect.right % barCount)
+			{
+				break;
+			}
+			bar[(int)i].width += 1;
+			bar[(int)i].x += shift;
+
+			for (int j = (int)(i - (float)barCount / (float)(windowRect.right % barCount)) + 1; j < (int)i; j++)
+			{
+				bar[j].x += shift;
+			}
+
+			shift++;
+		}
+
+		i -= (float)barCount / (float)(windowRect.right % barCount);
+
+		for(int j = (int)i + 1; j < barCount; j++)
+		{ 
+			bar[j].x += shift;
 		}
 
 		//Shifts all bars that weren't made larger to the right
-		for (int i = windowRect.right % barCount; i < barCount; i++)
+		/*for (int i = windowRect.right % barCount; i < barCount; i++)
 		{
 			bar[i].x += windowRect.right % barCount;
-		}
+		}*/
 	}
 }
 
