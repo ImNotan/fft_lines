@@ -29,6 +29,7 @@ void	Redraw(HWND hwnd);
 #define IDC_BUTTON_CONNECTSERIAL		(HMENU)1013
 #define IDC_BUTTON_IGNORESERIAL			(HMENU)1014
 #define IDC_BUTTON_CIRCLE				(HMENU)1015
+#define IDC_BUTTON_WAVEFORM				(HMENU)1016
 
 #define IDC_COMBO_COLORS				(HMENU)1020
 
@@ -58,6 +59,9 @@ bool background = DEFAULT_BACKGROUND;
 bool gradient = DEFAULT_GRADIENT;
 bool ignoreSerial = DEFAULT_IGNORESERIAL;
 bool circle = DEFAULT_CIRCLE;
+bool waveform = DEFAULT_WAVEFORM;
+
+int barCountwaveform;
 
 const int bottomBarHeihgt = DEFAULT_BOTTOMBARHEIGHT;
 //Which Bar gets printed to Serial
@@ -131,6 +135,31 @@ void setVariable(char* value, int variableNumber)
 			if (circle < 0 || circle > 1)
 				circle = DEFAULT_CIRCLE;
 			break;
+
+		case 8:
+			waveform = atoi(value);
+			if (waveform < 0 || waveform > 1)
+				waveform = DEFAULT_WAVEFORM;
+
+			if (waveform)
+			{
+				barCountwaveform = barCount;
+				barCount = N;
+				BARINFO* tmp = (BARINFO*)realloc(bar, barCount * sizeof(BARINFO));
+				if (tmp)
+				{
+					bar = tmp;
+					ResizeBars(globalhwnd);
+					//Redraw(globalhwnd);
+					//SendMessageW(globalhwnd, WM_SIZE, 0, 0);
+				}
+				else
+				{
+					MessageBoxA(globalhwnd, "Failed to allocate memory for bar", "Warning", MB_OK);
+					SendMessageW(globalhwnd, WM_DESTROY, 0, 0);
+				}
+			}
+			break;
 	}
 }
 
@@ -184,7 +213,7 @@ void writeSettings()
 	SetFilePointerEx(hSettingsFile, move, NULL, FILE_BEGIN);
 
 	char str[1000];
-	sprintf_s(str, 1000, ";%d;;%0.6ff;;%I64d;;%d;;%d;;%d;;%d;;%d;", barCount, zoom, colorSel, border, background, gradient, ignoreSerial, circle);
+	sprintf_s(str, 1000, ";%d;;%0.6ff;;%I64d;;%d;;%d;;%d;;%d;;%d;;%d;", barCount, zoom, colorSel, border, background, gradient, ignoreSerial, circle, waveform);
 	WriteFile(hSettingsFile, str, 1000, NULL, NULL);
 }
 
@@ -265,6 +294,7 @@ LRESULT CALLBACK SettingsDlgProc(HWND hwnd, UINT Message, WPARAM wParam, LPARAM 
 		HWND EditBarsDesc = CreateWindowW(L"Static", L"Set Number of Bars:",
 			WS_CHILD | WS_VISIBLE, 400, 20, 150, 15, hwnd, IDC_SET_BARCOUNT_DESCRIBTION, NULL, NULL);
 
+
 		//Controls for Settings
 		HWND ButtonBorder = CreateWindowW(L"Button", L"Border",
 			WS_CHILD | WS_VISIBLE | BS_AUTOCHECKBOX, 50, 140, 150, 15, hwnd, IDC_BUTTON_BORDER, NULL, NULL);
@@ -289,6 +319,13 @@ LRESULT CALLBACK SettingsDlgProc(HWND hwnd, UINT Message, WPARAM wParam, LPARAM 
 
 		if (circle)
 			SendMessageW(ButtonCircle, BM_SETCHECK, BST_CHECKED, 0);
+
+		HWND ButtonWaveform = CreateWindowW(L"Button", L"Waveform",
+			WS_CHILD | WS_VISIBLE | BS_AUTOCHECKBOX, 50, 220, 150, 15, hwnd, IDC_BUTTON_WAVEFORM, NULL, NULL);
+
+		if (waveform)
+			SendMessageW(ButtonWaveform, BM_SETCHECK, BST_CHECKED, 0);
+
 
 		HWND ButtonConnectSerial = CreateWindowW(L"Button", L"Connect Serial",
 			WS_CHILD | WS_VISIBLE, 50, 250, 100, 20, hwnd, IDC_BUTTON_CONNECTSERIAL, NULL, NULL);
@@ -456,6 +493,29 @@ LRESULT CALLBACK SettingsDlgProc(HWND hwnd, UINT Message, WPARAM wParam, LPARAM 
 		case IDC_BUTTON_CIRCLE:
 			circle = !circle;
 			break;
+		case IDC_BUTTON_WAVEFORM:
+		{
+			waveform = !waveform;
+			if (waveform)
+				barCount = N;
+			else
+				barCount = barCountwaveform;
+
+			BARINFO* tmp = (BARINFO*)realloc(bar, barCount * sizeof(BARINFO));
+			if (tmp)
+			{
+				bar = tmp;
+				ResizeBars(globalhwnd);
+				Redraw(globalhwnd);
+				//SendMessageW(globalhwnd, WM_SIZE, 0, 0);
+			}
+			else
+			{
+				MessageBoxA(hwnd, "Failed to allocate memory for bar", "Warning", MB_OK);
+				SendMessageW(globalhwnd, WM_DESTROY, 0, 0);
+			}
+		}
+		break;
 		case IDC_COMBO_COLORS:
 			switch (HIWORD(wParam))
 			{

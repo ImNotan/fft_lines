@@ -114,39 +114,49 @@ LRESULT CALLBACK WndProc(HWND hwnd, UINT msg, WPARAM wParam, LPARAM lParam)
 		if (bdone)
 		{
 			//Calculates fourier transfor of audio data
-			fftwf_complex *input;
-			fftwf_complex *output;
-
-			input = (fftwf_complex*)malloc(N * sizeof(fftwf_complex));
-			output = (fftwf_complex*)malloc(N * sizeof(fftwf_complex));
-
-			if (input && output)
+			if (!waveform)
 			{
-				for (int i = 0; i < N; i++)
+				fftwf_complex* input;
+				fftwf_complex* output;
+
+				input = (fftwf_complex*)malloc(N * sizeof(fftwf_complex));
+				output = (fftwf_complex*)malloc(N * sizeof(fftwf_complex));
+
+				if (input && output)
 				{
-					input[i][REAL] = (float)largeBuffer[i];
-					input[i][IMAG] = 0;
+					for (int i = 0; i < N; i++)
+					{
+						input[i][REAL] = (float)largeBuffer[i];
+						input[i][IMAG] = 0;
+					}
+
+					fft(input, output);
+
+					//Sets the height of the bars calculated by fourier transfor
+					for (int i = 0; i < barCount; i++)
+					{
+						//Calculates distance to origin with Pythagoras in complex plane
+						bar[i].height = (int)(sqrt(pow(output[i][REAL], 2) + pow(output[i][IMAG], 2)) * zoom);
+
+						//multiplies it by function to lower low frequncies and boost high frequencies
+						//bar[i].height *= 0.5 * sqrt((float)0.25 * i + 1);
+					}
+
+					free(input);
+					free(output);
 				}
-
-				fft(input, output);
-
-				//Sets the height of the bars calculated by fourier transfor
-				for (int i = 0; i < barCount; i++)
+				else
 				{
-					//Calculates distance to origin with Pythagoras in complex plane
-					bar[i].height = (int)(sqrt(pow(output[i][REAL], 2) + pow(output[i][IMAG], 2)) * zoom);
-
-					//multiplies it by function to lower low frequncies and boost high frequencies
-					//bar[i].height *= 0.5 * sqrt((float)0.25 * i + 1);
+					MessageBoxA(hwnd, "Failed to allocate memory for input or output", "Warning", MB_OK);
+					SendMessageW(hwnd, WM_DESTROY, NULL, NULL);
 				}
-
-				free(input);
-				free(output);
 			}
 			else
 			{
-				MessageBoxA(hwnd, "Failed to allocate memory for input or output", "Warning", MB_OK);
-				SendMessageW(hwnd, WM_DESTROY, NULL, NULL);
+				for (int i = 0; i < barCount; i++)
+				{
+					bar[i].height = largeBuffer[i] * 0.01f + 200;
+				}
 			}
 
 			//Prints to serial

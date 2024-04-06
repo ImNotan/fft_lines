@@ -15,6 +15,7 @@
 #define DEFAULT_GRADIENT 1
 #define DEFAULT_IGNORESERIAL 1
 #define DEFAULT_CIRCLE 0
+#define DEFAULT_WAVEFORM 0
 
 #define DEFAULT_BOTTOMBARHEIGHT 30
 #define DEFAULT_LEDBAR 4
@@ -45,6 +46,7 @@ extern bool background;
 extern bool gradient;
 extern bool ignoreSerial;
 extern bool circle;
+extern bool waveform;
 
 extern const int bottomBarHeihgt;
 extern const int led_bar;

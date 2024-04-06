@@ -227,11 +227,11 @@ void DrawBackground(RECT windowRect)
 void DrawBars(RECT windowRect)
 {
     D2D1_RECT_F barRect;
-
-    //0bcg
-    switch (circle << 1 | gradient)
+    //waveform circle gradient
+    //0bwcg
+    switch (waveform << 2 | circle << 1 | gradient)
     {
-        case 0b00: //normal & no circle
+        case 0b000: //normal & no circle
         {
             for (int i = 0; i < barCount; i++)
             {
@@ -241,7 +241,7 @@ void DrawBars(RECT windowRect)
         }
         break;
 
-        case 0b01: //gradient & no circle
+        case 0b001: //gradient & no circle
         {
             for (int i = 0; i < barCount; i++)
             {
@@ -253,7 +253,7 @@ void DrawBars(RECT windowRect)
         }
         break;
 
-        case 0b10: //no gradient & circle
+        case 0b010: //no gradient & circle
         {
             float rotation = 0.0f;
             int radius = 100;
@@ -270,7 +270,7 @@ void DrawBars(RECT windowRect)
         }
         break;
 
-        case 0b11: //gradient & circle
+        case 0b011: //gradient & circle
         {
             float rotation = 0.0f;
             int radius = 100;
@@ -287,6 +287,16 @@ void DrawBars(RECT windowRect)
             }
 
             pRenderTarget->SetTransform(D2D1::Matrix3x2F::Rotation(0.0f, D2D1::Point2F(0, 0)));
+        }
+        break;
+
+        case 0b100:
+        {
+            for (int i = 0; i < barCount; i++)
+            {
+                barRect = D2D1::Rect(bar[i].x, (int)windowRect.bottom - bar[i].height, bar[i].x + bar[i].width, (int)windowRect.bottom - bar[i].height + 20);
+                pRenderTarget->FillRectangle(&barRect, pbarBrushSolid[(unsigned int)((float)(((float)i / ((float)barCount - 1.0)) * 254.0))]);
+            }
         }
         break;
     }
