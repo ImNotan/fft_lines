@@ -153,9 +153,11 @@ LRESULT CALLBACK WndProc(HWND hwnd, UINT msg, WPARAM wParam, LPARAM lParam)
 			}
 			else
 			{
+				RECT windowRect;
+				GetClientRect(hwnd, &windowRect);
 				for (int i = 0; i < barCount; i++)
 				{
-					bar[i].height = largeBuffer[i] * 0.01f + 200;
+					bar[i].height = largeBuffer[i] * 0.01f + (windowRect.bottom - bottomBarHeihgt) / 2;
 				}
 			}
 

@@ -249,10 +249,6 @@ void ResizeBars(HWND hwnd)
 	RECT windowRect;
 	GetClientRect(hwnd, &windowRect);
 
-	//Get information about audio stream
-
-
-	//set new size of bars
 	if (barCount > 0 && windowRect.right > 1)
 	{
 		//For every bar set width
@@ -263,27 +259,26 @@ void ResizeBars(HWND hwnd)
 		}
 
 		//Calculates how many bar have to be larger
-		//Shifts bar to the right by how many bars already made bigger
-		/*for (int i = 0; i < windowRect.right % barCount; i++)
-		{
-			bar[i].width += 1;
-			bar[i].x += i;
-		}*/
 
+		//Can't divide by 0
 		if (barCount == windowRect.right)
 			return;
 
 		int shift = 0;
 		float i;
+		//iterates over number of bars divided by how many bars need to be bigger
 		for (i = 0; i < barCount; i += (float)barCount / (float)(windowRect.right % barCount))
 		{
+			//End loop if enough bars have been moved edge case
 			if (shift > windowRect.right % barCount)
 			{
 				break;
 			}
+			//Increases width and shift
 			bar[(int)i].width += 1;
 			bar[(int)i].x += shift;
 
+			//iterates over bars between two larger bars and shifts them
 			for (int j = (int)(i - (float)barCount / (float)(windowRect.right % barCount)) + 1; j < (int)i; j++)
 			{
 				bar[j].x += shift;
@@ -292,18 +287,13 @@ void ResizeBars(HWND hwnd)
 			shift++;
 		}
 
+		//shifts over the last bars which haven't been shifted yet
 		i -= (float)barCount / (float)(windowRect.right % barCount);
 
 		for(int j = (int)i + 1; j < barCount; j++)
 		{ 
 			bar[j].x += shift;
 		}
-
-		//Shifts all bars that weren't made larger to the right
-		/*for (int i = windowRect.right % barCount; i < barCount; i++)
-		{
-			bar[i].x += windowRect.right % barCount;
-		}*/
 	}
 }
 
@@ -528,7 +518,10 @@ LRESULT CALLBACK SettingsDlgProc(HWND hwnd, UINT Message, WPARAM wParam, LPARAM 
 		{
 			waveform = !waveform;
 			if (waveform)
+			{
+				barCountwaveform = barCount;
 				barCount = N;
+			}
 			else
 				barCount = barCountwaveform;
 
