@@ -114,50 +114,52 @@ LRESULT CALLBACK WndProc(HWND hwnd, UINT msg, WPARAM wParam, LPARAM lParam)
 		if (bdone)
 		{
 			//Calculates fourier transfor of audio data
-			if (!waveform)
+			fftwf_complex* input;
+			fftwf_complex* output;
+
+			input = (fftwf_complex*)malloc(N * sizeof(fftwf_complex));
+			output = (fftwf_complex*)malloc(N * sizeof(fftwf_complex));
+
+			if (input && output)
 			{
-				fftwf_complex* input;
-				fftwf_complex* output;
-
-				input = (fftwf_complex*)malloc(N * sizeof(fftwf_complex));
-				output = (fftwf_complex*)malloc(N * sizeof(fftwf_complex));
-
-				if (input && output)
+				for (int i = 0; i < N; i++)
 				{
-					for (int i = 0; i < N; i++)
-					{
-						input[i][REAL] = (float)largeBuffer[i];
-						input[i][IMAG] = 0;
-					}
-
-					fft(input, output);
-
-					//Sets the height of the bars calculated by fourier transfor
-					for (int i = 0; i < barCount; i++)
-					{
-						//Calculates distance to origin with Pythagoras in complex plane
-						bar[i].height = (int)(sqrt(pow(output[i][REAL], 2) + pow(output[i][IMAG], 2)) * zoom);
-
-						//multiplies it by function to lower low frequncies and boost high frequencies
-						//bar[i].height *= 0.5 * sqrt((float)0.25 * i + 1);
-					}
-
-					free(input);
-					free(output);
+					input[i][REAL] = (float)largeBuffer[i];
+					input[i][IMAG] = 0;
 				}
-				else
+
+				fft(input, output);
+
+				//Sets the height of the bars calculated by fourier transfor
+				for (int i = 0; i < barCount; i++)
 				{
-					MessageBoxA(hwnd, "Failed to allocate memory for input or output", "Warning", MB_OK);
-					SendMessageW(hwnd, WM_DESTROY, NULL, NULL);
+					//Calculates distance to origin with Pythagoras in complex plane
+					bar[i].height = (int)(sqrt(pow(output[i][REAL], 2) + pow(output[i][IMAG], 2)) * zoom);
+
+					if (circle)
+					{
+						bar[i].height += 10;
+					}
+					//multiplies it by function to lower low frequncies and boost high frequencies
+					//bar[i].height *= 0.5 * sqrt((float)0.25 * i + 1);
 				}
+
+				free(input);
+				free(output);
 			}
 			else
 			{
+				MessageBoxA(hwnd, "Failed to allocate memory for input or output", "Warning", MB_OK);
+				SendMessageW(hwnd, WM_DESTROY, NULL, NULL);
+			}
+			
+			if(waveform)
+			{
 				RECT windowRect;
 				GetClientRect(hwnd, &windowRect);
-				for (int i = 0; i < barCount; i++)
+				for (int i = 0; i < N; i++)
 				{
-					bar[i].height = largeBuffer[i] * 0.01f + (windowRect.bottom - bottomBarHeihgt) / 2;
+					waveBar[i].height = largeBuffer[i] * 0.01f + (windowRect.bottom - bottomBarHeihgt) / 2 + 50;
 				}
 			}
 
@@ -225,7 +227,9 @@ LRESULT CALLBACK WndProc(HWND hwnd, UINT msg, WPARAM wParam, LPARAM lParam)
 		break;
 	case WM_SIZE:
 	{
-		ResizeBars(hwnd);
+		ResizeBars(hwnd, bar, barCount);
+		if (waveform)
+			ResizeBars(hwnd, waveBar, N);
 
 		Resize(hwnd);
 	}
@@ -251,6 +255,8 @@ LRESULT CALLBACK WndProc(HWND hwnd, UINT msg, WPARAM wParam, LPARAM lParam)
 
 		//memory
 		free(bar);
+		if(waveform)
+			free(waveBar);
 
 		//write settings to a file
 		writeSettings();
