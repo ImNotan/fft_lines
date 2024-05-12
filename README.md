@@ -12,6 +12,8 @@ This Windows application allows users to visualize the Fast Fourier Transform (F
     -  window size
     -  color Gradients
     -  3D-mode
+    -  Circle-mode
+    -  Wave-mode
 - Additional serial output for led-strip [Arduino Code](https://github.com/ImNotan/fft_lines_arduino)
 
 ## Screenshots
@@ -23,44 +25,71 @@ This Windows application allows users to visualize the Fast Fourier Transform (F
 *Main application window with FFT visualization. And 2D-barmode*
 
 ## Video
-[![fft lines](https://img.youtube.com/vi/kxXr2HNGEww/0.jpg)](https://www.youtube.com/watch?v=kxXr2HNGEww)
 
-*Music used: Englishman in New York*
+
+
+https://github.com/ImNotan/fft_lines/assets/66617967/ef2ba0ff-73c2-4931-b475-d4ec296d0a0f
+
+
+
+https://github.com/ImNotan/fft_lines/assets/66617967/dd493760-969b-4025-bb07-b6bdc99a37ae
+
+
+
+https://github.com/ImNotan/fft_lines/assets/66617967/42f4f58e-a3d3-4853-8c53-45818732c51c
+
+
+
+https://github.com/ImNotan/fft_lines/assets/66617967/e742f60e-dcfa-42d7-ac87-91bf54102aca
+
+
+
+https://github.com/ImNotan/fft_lines/assets/66617967/a5881c2a-9bcf-417a-8fcc-29e32eadf2e5
+
+
+
+https://github.com/ImNotan/fft_lines/assets/66617967/e95fb227-578a-46c1-9e23-4dc1470eb598
+
+
+
+https://github.com/ImNotan/fft_lines/assets/66617967/a109ae5b-9acd-42b4-a76b-abf2490be130
+
+
+
+https://github.com/ImNotan/fft_lines/assets/66617967/67265163-a260-49b1-a256-830093cc929f
+
+
 
 ## Installation
 
-May be flagged by Anti-Virus because I don't have a code signing certificate
-
-1. Download the latest release from the [Releases](https://github.com/ImNotan/fft_lines/releases) page.
-2. Run fft_lines_setup.msi.
+Not available yet
 
 
 ## Usage
 
+### Start
 1. Open the application.
 2. Adjust FFT settings as needed.
-3. Press the "Start" button to begin capturing and visualizing audio.
-4. Explore and analyze the real-time FFT visualization.
-5. To stop the visualization, press the "Stop" button.
-6. Save or export the FFT visualization if desired.
+3. Play music on you Device
+If no bars show up when sound is played see Change Device
 
-
-If no bars show up when sound is played:
+### Change Device
 1. Click settings in the menu of the application
 2. Click Devices
-3. Select your speaker or microphone
+3. Select your speaker or microphone you want to use
 4. !!Click Change Device!!
 
-## Settings
+### Settings
 
 Click settings in the menu of the application
 - **Number of Bars (Frequency Range):** Adjust the number of Bars.
 - **Size of Bars:** Set the size of Bars if volume is too low.
 - **Color Scheme:** Select a Color Scheme from the Dropwdown.
-- **Additional:** Border, 3D-background, Color Gradient
+- **Additional:** 3D-background, Color Gradient, Circle-mode, wave-mode
 - **Serial:** Click Connect Serial if Serial didn#t connect on start
 
 To permanently apply settings Click OK
+Settings are saved for next use
 
 ## Dependencies
 
