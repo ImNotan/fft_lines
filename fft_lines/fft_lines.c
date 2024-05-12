@@ -19,7 +19,7 @@
 //Define wasapi_audio.cpp functions for audio recording with WASAPI
 HRESULT initializeRecording();
 void	uninitializeRecording();
-HRESULT GetAudioBuffer(int16_t* buffer, BOOL* bdone);
+HRESULT GetAudioBuffer(int16_t* buffer);
 HRESULT startRecording();
 void	Exit();
 
@@ -108,10 +108,11 @@ LRESULT CALLBACK WndProc(HWND hwnd, UINT msg, WPARAM wParam, LPARAM lParam)
 	break;
 	case WM_TIMER:
 	{
-		BOOL bdone = false;
-		GetAudioBuffer(&largeBuffer, &bdone);
+		HRESULT hr = S_OK;
 
-		if (bdone)
+		hr = GetAudioBuffer(&largeBuffer);
+
+		if (!FAILED(hr))
 		{
 			//Calculates fourier transfor of audio data
 			fftwf_complex* input;
@@ -140,8 +141,6 @@ LRESULT CALLBACK WndProc(HWND hwnd, UINT msg, WPARAM wParam, LPARAM lParam)
 					{
 						bar[i].height += 10;
 					}
-					//multiplies it by function to lower low frequncies and boost high frequencies
-					//bar[i].height *= 0.5 * sqrt((float)0.25 * i + 1);
 				}
 
 				free(input);
@@ -153,6 +152,7 @@ LRESULT CALLBACK WndProc(HWND hwnd, UINT msg, WPARAM wParam, LPARAM lParam)
 				SendMessageW(hwnd, WM_DESTROY, NULL, NULL);
 			}
 			
+			//Copys audio buffer
 			if(waveform)
 			{
 				RECT windowRect;
@@ -171,6 +171,8 @@ LRESULT CALLBACK WndProc(HWND hwnd, UINT msg, WPARAM wParam, LPARAM lParam)
 				WriteSerial(line, globalhwnd);
 			}
 
+
+			//Calculate fps
 			QueryPerformanceCounter(&EndingTime);
 			ElapsedMicroseconds.QuadPart = EndingTime.QuadPart - StartingTime.QuadPart;
 
