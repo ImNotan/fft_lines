@@ -61,8 +61,8 @@ https://github.com/ImNotan/fft_lines/assets/66617967/67265163-a260-49b1-a256-830
 
 
 ## Installation
-
-Not available yet
+Download from [Release](https://github.com/ImNotan/fft_lines/releases/tag/v1.1.0)
+Unzip and start fft_lines.exe
 
 
 ## Usage
