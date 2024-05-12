@@ -1,5 +1,7 @@
 #include <Windows.h>
 #include <stdio.h>
+#define _USE_MATH_DEFINES
+#include <math.h>
 #include <commctrl.h>
 #include <stdbool.h>
 #include <Shlwapi.h>
@@ -23,12 +25,13 @@ void	Redraw(HWND hwnd);
 #define IDC_SET_BARCOUNT_DESCRIBTION	(HMENU)1007
 #define IDC_EDIT_BARCOUNT				(HMENU)1008
 
-#define IDC_BUTTON_BORDER				(HMENU)1010
+#define IDC_BUTTON_FFT					(HMENU)1010
 #define IDC_BUTTON_BACKGROUND			(HMENU)1011
 #define IDC_BUTTON_GRADIENT				(HMENU)1012
 #define IDC_BUTTON_CONNECTSERIAL		(HMENU)1013
 #define IDC_BUTTON_IGNORESERIAL			(HMENU)1014
 #define IDC_BUTTON_CIRCLE				(HMENU)1015
+#define IDC_BUTTON_WAVEFORM				(HMENU)1016
 
 #define IDC_COMBO_COLORS				(HMENU)1020
 
@@ -43,6 +46,7 @@ HANDLE hSettingsFile;
 
 //Allocated in fft_lines.c
 BARINFO* bar;
+BARINFO* waveBar;
 
 //Pointer to color gradient used in drawBar2D.cpp - CreateBarBrush
 double* pGradients = &plasma;
@@ -53,11 +57,14 @@ LRESULT colorSel = DEFAULT_COLORSEL;
 
 int barCount = DEFAULT_BARCOUNT;
 
-bool border = DEFAULT_BORDER;
+bool dofft = DEFAULT_FFT;
 bool background = DEFAULT_BACKGROUND;
 bool gradient = DEFAULT_GRADIENT;
 bool ignoreSerial = DEFAULT_IGNORESERIAL;
 bool circle = DEFAULT_CIRCLE;
+bool waveform = DEFAULT_WAVEFORM;
+
+int barCountwaveform;
 
 const int bottomBarHeihgt = DEFAULT_BOTTOMBARHEIGHT;
 //Which Bar gets printed to Serial
@@ -103,9 +110,9 @@ void setVariable(char* value, int variableNumber)
 			break;
 
 		case 3:
-			border = atoi(value);
-			if (border < 0 || border > 1)
-				border = DEFAULT_BORDER;
+			dofft = atoi(value);
+			if (dofft < 0 || dofft > 1)
+				dofft = DEFAULT_FFT;
 			break;
 
 		case 4:
@@ -130,6 +137,29 @@ void setVariable(char* value, int variableNumber)
 			circle = atoi(value);
 			if (circle < 0 || circle > 1)
 				circle = DEFAULT_CIRCLE;
+			break;
+
+		case 8:
+			waveform = atoi(value);
+			if (waveform < 0 || waveform > 1)
+				waveform = DEFAULT_WAVEFORM;
+
+			if (waveform)
+			{
+				BARINFO* tmp = (BARINFO*)malloc(N * sizeof(BARINFO));
+				if (tmp)
+				{
+					waveBar = tmp;
+					ResizeBars(globalhwnd, waveBar, N);
+					//Redraw(globalhwnd);
+					//SendMessageW(globalhwnd, WM_SIZE, 0, 0);
+				}
+				else
+				{
+					MessageBoxA(globalhwnd, "Failed to allocate memory for bar", "Warning", MB_OK);
+					SendMessageW(globalhwnd, WM_DESTROY, 0, 0);
+				}
+			}
 			break;
 	}
 }
@@ -184,7 +214,7 @@ void writeSettings()
 	SetFilePointerEx(hSettingsFile, move, NULL, FILE_BEGIN);
 
 	char str[1000];
-	sprintf_s(str, 1000, ";%d;;%0.6ff;;%I64d;;%d;;%d;;%d;;%d;;%d;", barCount, zoom, colorSel, border, background, gradient, ignoreSerial, circle);
+	sprintf_s(str, 1000, ";%d;;%0.6ff;;%I64d;;%d;;%d;;%d;;%d;;%d;;%d;", barCount, zoom, colorSel, dofft, background, gradient, ignoreSerial, circle, waveform);
 	WriteFile(hSettingsFile, str, 1000, NULL, NULL);
 }
 
@@ -213,36 +243,55 @@ void setColor()
 	}
 }
 
-void ResizeBars(HWND hwnd)
+void ResizeBars(HWND hwnd, BARINFO* bars, int size)
 {
 	RECT windowRect;
 	GetClientRect(hwnd, &windowRect);
 
-	//Get information about audio stream
-
-
-	//set new size of bars
-	if (barCount > 0)
+	if (size > 0 && windowRect.right > 1)
 	{
 		//For every bar set width
-		for (int i = 0; i < barCount; i++)
+		for (int i = 0; i < size; i++)
 		{
-			bar[i].width = (unsigned int)((windowRect.right / barCount) + 1);
-			bar[i].x = i * (bar[i].width - 1);
+			bars[i].width = (unsigned int)((windowRect.right / size) + 1);
+			bars[i].x = i * (bars[i].width - 1);
 		}
 
 		//Calculates how many bar have to be larger
-		//Shifts bar to the right by how many bars already made bigger
-		for (int i = 0; i < windowRect.right % barCount; i++)
+
+		//Can't divide by 0
+		if (windowRect.right % size == 0)
+			return;
+
+		int shift = 0;
+		float i;
+		//iterates over number of bars divided by how many bars need to be bigger
+		for (i = 0; i < size; i += (float)size / (float)(windowRect.right % size))
 		{
-			bar[i].width += 1;
-			bar[i].x += i;
+			//End loop if enough bars have been moved edge case
+			if (shift > windowRect.right % size)
+			{
+				break;
+			}
+			//Increases width and shift
+			bars[(int)i].width += 1;
+			bars[(int)i].x += shift;
+
+			//iterates over bars between two larger bars and shifts them
+			for (int j = (int)(i - (float)size / (float)(windowRect.right % size)) + 1; j < (int)i; j++)
+			{
+				bars[j].x += shift;
+			}
+
+			shift++;
 		}
 
-		//Shifts all bars that weren't made larger to the right
-		for (int i = windowRect.right % barCount; i < barCount; i++)
-		{
-			bar[i].x += windowRect.right % barCount;
+		//shifts over the last bars which haven't been shifted yet
+		i -= (float)size / (float)(windowRect.right % size);
+
+		for(int j = (int)i + 1; j < size; j++)
+		{ 
+			bars[j].x += shift;
 		}
 	}
 }
@@ -265,11 +314,12 @@ LRESULT CALLBACK SettingsDlgProc(HWND hwnd, UINT Message, WPARAM wParam, LPARAM 
 		HWND EditBarsDesc = CreateWindowW(L"Static", L"Set Number of Bars:",
 			WS_CHILD | WS_VISIBLE, 400, 20, 150, 15, hwnd, IDC_SET_BARCOUNT_DESCRIBTION, NULL, NULL);
 
-		//Controls for Settings
-		HWND ButtonBorder = CreateWindowW(L"Button", L"Border",
-			WS_CHILD | WS_VISIBLE | BS_AUTOCHECKBOX, 50, 140, 150, 15, hwnd, IDC_BUTTON_BORDER, NULL, NULL);
 
-		if (border)
+		//Controls for Settings
+		HWND ButtonBorder = CreateWindowW(L"Button", L"FFT",
+			WS_CHILD | WS_VISIBLE | BS_AUTOCHECKBOX, 50, 140, 150, 15, hwnd, IDC_BUTTON_FFT, NULL, NULL);
+
+		if (dofft)
 			SendMessageW(ButtonBorder, BM_SETCHECK, BST_CHECKED, 0);
 
 		HWND ButtonBackground = CreateWindowW(L"Button", L"3D Background",
@@ -289,6 +339,13 @@ LRESULT CALLBACK SettingsDlgProc(HWND hwnd, UINT Message, WPARAM wParam, LPARAM 
 
 		if (circle)
 			SendMessageW(ButtonCircle, BM_SETCHECK, BST_CHECKED, 0);
+
+		HWND ButtonWaveform = CreateWindowW(L"Button", L"Waveform",
+			WS_CHILD | WS_VISIBLE | BS_AUTOCHECKBOX, 50, 220, 150, 15, hwnd, IDC_BUTTON_WAVEFORM, NULL, NULL);
+
+		if (waveform)
+			SendMessageW(ButtonWaveform, BM_SETCHECK, BST_CHECKED, 0);
+
 
 		HWND ButtonConnectSerial = CreateWindowW(L"Button", L"Connect Serial",
 			WS_CHILD | WS_VISIBLE, 50, 250, 100, 20, hwnd, IDC_BUTTON_CONNECTSERIAL, NULL, NULL);
@@ -329,7 +386,7 @@ LRESULT CALLBACK SettingsDlgProc(HWND hwnd, UINT Message, WPARAM wParam, LPARAM 
 		SendMessageW(hZoomSlider, TBM_SETRANGE, TRUE, MAKELONG(1, 100));
 		SendMessageW(hZoomSlider, TBM_SETPAGESIZE, 0, 10);
 		SendMessageW(hZoomSlider, TBM_SETTICFREQ, 10, 0);
-		SendMessageW(hZoomSlider, TBM_SETPOS, TRUE, (int)(zoom * 1000000));
+		SendMessageW(hZoomSlider, TBM_SETPOS, TRUE, (int)(zoom * 100000));
 
 		hwndComboBox = CreateWindow(WC_COMBOBOX, TEXT(""),
 			CBS_DROPDOWN | CBS_HASSTRINGS | WS_CHILD | WS_OVERLAPPED | WS_VISIBLE | WS_VSCROLL,
@@ -433,7 +490,7 @@ LRESULT CALLBACK SettingsDlgProc(HWND hwnd, UINT Message, WPARAM wParam, LPARAM 
 			if (tmp)
 			{
 				bar = tmp;
-				ResizeBars(globalhwnd);
+				ResizeBars(globalhwnd, bar, barCount);
 				Redraw(globalhwnd);
 				//SendMessageW(globalhwnd, WM_SIZE, 0, 0);
 			}
@@ -444,8 +501,8 @@ LRESULT CALLBACK SettingsDlgProc(HWND hwnd, UINT Message, WPARAM wParam, LPARAM 
 			}
 			DestroyWindow(SettingsDlg);
 			break;
-		case IDC_BUTTON_BORDER:
-			border = !border;
+		case IDC_BUTTON_FFT:
+			dofft = !dofft;
 			break;
 		case IDC_BUTTON_BACKGROUND:
 			background = !background;
@@ -456,6 +513,31 @@ LRESULT CALLBACK SettingsDlgProc(HWND hwnd, UINT Message, WPARAM wParam, LPARAM 
 		case IDC_BUTTON_CIRCLE:
 			circle = !circle;
 			break;
+		case IDC_BUTTON_WAVEFORM:
+		{
+			waveform = !waveform;
+			if (waveform)
+			{
+				BARINFO* tmp = (BARINFO*)malloc(N * sizeof(BARINFO));
+				if (tmp)
+				{
+					waveBar = tmp;
+					ResizeBars(globalhwnd, waveBar, N);
+					//Redraw(globalhwnd);
+					//SendMessageW(globalhwnd, WM_SIZE, 0, 0);
+				}
+				else
+				{
+					MessageBoxA(globalhwnd, "Failed to allocate memory for bar", "Warning", MB_OK);
+					SendMessageW(globalhwnd, WM_DESTROY, 0, 0);
+				}
+			}
+			else
+			{
+				free(waveBar);
+			}
+		}
+		break;
 		case IDC_COMBO_COLORS:
 			switch (HIWORD(wParam))
 			{
@@ -479,7 +561,7 @@ LRESULT CALLBACK SettingsDlgProc(HWND hwnd, UINT Message, WPARAM wParam, LPARAM 
 		if (tmp)
 		{
 			bar = tmp;
-			ResizeBars(globalhwnd);
+			ResizeBars(globalhwnd, bar, barCount);
 			Redraw(globalhwnd);
 			//SendMessageW(globalhwnd, WM_SIZE, 0, 0);
 		}
@@ -493,7 +575,7 @@ LRESULT CALLBACK SettingsDlgProc(HWND hwnd, UINT Message, WPARAM wParam, LPARAM 
 		SetDlgItemTextW(hwnd, IDC_EDIT_BARCOUNT, strBarCount);
 
 		LRESULT posZoom = SendMessageW(hZoomSlider, TBM_GETPOS, 0, 0);
-		zoom = (float)posZoom * 0.000001f;
+		zoom = (float)posZoom * 0.00001f;
 	}
 	break;
 	default:

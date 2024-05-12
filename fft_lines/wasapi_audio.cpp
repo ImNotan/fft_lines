@@ -21,7 +21,6 @@ HMMIO hFile = NULL;
 
 // REFERENCE_TIME time units per second and per millisecond
 #define REFTIMES_PER_SEC  500000
-#define REFTIMES_PER_MILLISEC  500
 
 #define EXIT_ON_ERROR(hres)  \
                   if (FAILED(hres)) { return hr; }
@@ -55,7 +54,7 @@ IMMDeviceCollection* allDevices;
 
 extern "C" HRESULT initializeRecording();
 extern "C" void uninitializeRecording();
-extern "C" HRESULT GetAudioBuffer(int16_t* buffer, BOOL* bdone);
+extern "C" HRESULT GetAudioBuffer(int16_t* buffer);
 extern "C" HRESULT startRecording();
 extern "C" HRESULT stopRecording();
 extern "C" void Exit();
@@ -319,8 +318,9 @@ HRESULT MoveArray(int16_t* destination, int addCount, float* source)
     return S_OK;
 }
 
-HRESULT GetAudioBuffer(int16_t* buffer, BOOL* bdone)
+HRESULT GetAudioBuffer(int16_t* buffer)
 {
+    hr = S_OK;
     UINT packetLength = 0;
     hr = pCaptureClient->GetNextPacketSize(&packetLength);
     EXIT_ON_ERROR(hr);
@@ -341,7 +341,6 @@ HRESULT GetAudioBuffer(int16_t* buffer, BOOL* bdone)
         {
             LONG lBytesToWrite = numFramesAvailable * pwfx->nBlockAlign;
             float f[N];
-            //To explain what the fuck is happening here:
             //GetBuffer fills pData an Byte array with data
             //4 Bytes of pData create an float
             //pData is alternating between left and right channel
@@ -355,7 +354,6 @@ HRESULT GetAudioBuffer(int16_t* buffer, BOOL* bdone)
             //After that the new data is appended to the previous data which is moved forward to make space for the new data at the end
             MoveArray(buffer, i, f);
             i = 0;
-            *bdone = true;
         }
 
         hr = pCaptureClient->ReleaseBuffer(numFramesAvailable);

@@ -19,7 +19,7 @@
 //Define wasapi_audio.cpp functions for audio recording with WASAPI
 HRESULT initializeRecording();
 void	uninitializeRecording();
-HRESULT GetAudioBuffer(int16_t* buffer, BOOL* bdone);
+HRESULT GetAudioBuffer(int16_t* buffer);
 HRESULT startRecording();
 void	Exit();
 
@@ -108,14 +108,15 @@ LRESULT CALLBACK WndProc(HWND hwnd, UINT msg, WPARAM wParam, LPARAM lParam)
 	break;
 	case WM_TIMER:
 	{
-		BOOL bdone = false;
-		GetAudioBuffer(&largeBuffer, &bdone);
+		HRESULT hr = S_OK;
 
-		if (bdone)
+		hr = GetAudioBuffer(&largeBuffer);
+
+		if (!FAILED(hr))
 		{
 			//Calculates fourier transfor of audio data
-			fftwf_complex *input;
-			fftwf_complex *output;
+			fftwf_complex* input;
+			fftwf_complex* output;
 
 			input = (fftwf_complex*)malloc(N * sizeof(fftwf_complex));
 			output = (fftwf_complex*)malloc(N * sizeof(fftwf_complex));
@@ -136,8 +137,10 @@ LRESULT CALLBACK WndProc(HWND hwnd, UINT msg, WPARAM wParam, LPARAM lParam)
 					//Calculates distance to origin with Pythagoras in complex plane
 					bar[i].height = (int)(sqrt(pow(output[i][REAL], 2) + pow(output[i][IMAG], 2)) * zoom);
 
-					//multiplies it by function to lower low frequncies and boost high frequencies
-					//bar[i].height *= 0.5 * sqrt((float)0.25 * i + 1);
+					if (circle)
+					{
+						bar[i].height += 10;
+					}
 				}
 
 				free(input);
@@ -148,6 +151,17 @@ LRESULT CALLBACK WndProc(HWND hwnd, UINT msg, WPARAM wParam, LPARAM lParam)
 				MessageBoxA(hwnd, "Failed to allocate memory for input or output", "Warning", MB_OK);
 				SendMessageW(hwnd, WM_DESTROY, NULL, NULL);
 			}
+			
+			//Copys audio buffer
+			if(waveform)
+			{
+				RECT windowRect;
+				GetClientRect(hwnd, &windowRect);
+				for (int i = 0; i < N; i++)
+				{
+					waveBar[i].height = largeBuffer[i] * 0.01f + (windowRect.bottom - bottomBarHeihgt) / 2 + 50;
+				}
+			}
 
 			//Prints to serial
 			if (bar[led_bar].height >= 0 && doSerial)
@@ -157,6 +171,8 @@ LRESULT CALLBACK WndProc(HWND hwnd, UINT msg, WPARAM wParam, LPARAM lParam)
 				WriteSerial(line, globalhwnd);
 			}
 
+
+			//Calculate fps
 			QueryPerformanceCounter(&EndingTime);
 			ElapsedMicroseconds.QuadPart = EndingTime.QuadPart - StartingTime.QuadPart;
 
@@ -213,7 +229,9 @@ LRESULT CALLBACK WndProc(HWND hwnd, UINT msg, WPARAM wParam, LPARAM lParam)
 		break;
 	case WM_SIZE:
 	{
-		ResizeBars(hwnd);
+		ResizeBars(hwnd, bar, barCount);
+		if (waveform)
+			ResizeBars(hwnd, waveBar, N);
 
 		Resize(hwnd);
 	}
@@ -239,6 +257,8 @@ LRESULT CALLBACK WndProc(HWND hwnd, UINT msg, WPARAM wParam, LPARAM lParam)
 
 		//memory
 		free(bar);
+		if(waveform)
+			free(waveBar);
 
 		//write settings to a file
 		writeSettings();
