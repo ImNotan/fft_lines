@@ -14,7 +14,6 @@
 
 //Function from drawBar2D.cpp
 void    CreateBarBrush();
-void	Redraw(HWND hwnd);
 
 //Define Controls
 #define IDC_LEFT_BARCOUNT_LABEL			(HMENU)1000
@@ -63,6 +62,8 @@ bool gradient = DEFAULT_GRADIENT;
 bool ignoreSerial = DEFAULT_IGNORESERIAL;
 bool circle = DEFAULT_CIRCLE;
 bool waveform = DEFAULT_WAVEFORM;
+
+bool redrawAll = false;
 
 int barCountwaveform;
 
@@ -151,8 +152,6 @@ void setVariable(char* value, int variableNumber)
 				{
 					waveBar = tmp;
 					ResizeBars(globalhwnd, waveBar, N);
-					//Redraw(globalhwnd);
-					//SendMessageW(globalhwnd, WM_SIZE, 0, 0);
 				}
 				else
 				{
@@ -450,7 +449,7 @@ LRESULT CALLBACK SettingsDlgProc(HWND hwnd, UINT Message, WPARAM wParam, LPARAM 
 									if (tmp)
 									{
 										bar = tmp;
-										Redraw(globalhwnd);
+										redrawAll = true;
 									}
 									else
 									{
@@ -491,8 +490,7 @@ LRESULT CALLBACK SettingsDlgProc(HWND hwnd, UINT Message, WPARAM wParam, LPARAM 
 			{
 				bar = tmp;
 				ResizeBars(globalhwnd, bar, barCount);
-				Redraw(globalhwnd);
-				//SendMessageW(globalhwnd, WM_SIZE, 0, 0);
+				redrawAll = true;
 			}
 			else
 			{
@@ -523,8 +521,6 @@ LRESULT CALLBACK SettingsDlgProc(HWND hwnd, UINT Message, WPARAM wParam, LPARAM 
 				{
 					waveBar = tmp;
 					ResizeBars(globalhwnd, waveBar, N);
-					//Redraw(globalhwnd);
-					//SendMessageW(globalhwnd, WM_SIZE, 0, 0);
 				}
 				else
 				{
@@ -562,8 +558,7 @@ LRESULT CALLBACK SettingsDlgProc(HWND hwnd, UINT Message, WPARAM wParam, LPARAM 
 		{
 			bar = tmp;
 			ResizeBars(globalhwnd, bar, barCount);
-			Redraw(globalhwnd);
-			//SendMessageW(globalhwnd, WM_SIZE, 0, 0);
+			redrawAll = true;
 		}
 		else
 		{

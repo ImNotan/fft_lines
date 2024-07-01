@@ -37,13 +37,54 @@ IDWriteFactory* pWriteFactory;
 D2D1_SIZE_U previousSize;
 D2D1_RECT_U previousWindowRect;
 
-extern "C" HRESULT CreateGraphicsResources(HWND hwnd);
-extern "C" void    DiscardGraphicsResources();
-extern "C" void    OnPaint(HWND hwnd, int frameRate);
+/*-----------------------------------------------
+Public functions
+
+    Initialization:
+        PaintStart
+        DiscardGraphicsResources
+        CreateBarBrush
+
+    Drawing:
+        OnPaint
+        Resize
+-----------------------------------------------*/
+
 extern "C" HRESULT PaintStart();
-extern "C" void    Resize(HWND hwnd);
+extern "C" void    DiscardGraphicsResources();
 extern "C" void    CreateBarBrush();
-extern "C" void    Redraw(HWND hwnd);
+
+extern "C" void    OnPaint(HWND hwnd, int frameRate);
+extern "C" void    Resize(HWND hwnd);
+
+/*-----------------------------------------------
+Internal functions
+
+    Error Handling:
+        HandleError
+
+    Initialization:
+        CreateGraphicsResources
+
+    Drawing:
+        DrawBottomBar
+        DrawBackground
+        DrawBars
+        DrawFrameRate
+        CallDraws
+-----------------------------------------------*/
+
+void HandleError(HRESULT hr);
+
+HRESULT CreateGraphicsResources(HWND hwnd);
+
+void DrawBottomBar(HWND hwnd);
+void DrawBackground(RECT windowRect);
+void DrawBars(RECT windowRect);
+void DrawFrameRate(RECT windowRect, int frameRate);
+HRESULT CallDraws(HWND hwnd, int frameRate);
+
+
 
 /*-----------------------------------------------
     Error Handling
@@ -62,8 +103,9 @@ void HandleError(HRESULT hr)
 /*-----------------------------------------------
     Initialization of drawBar2D
 
-    Creates Factorys for Drawing
-    Called once in fft_lines.c - WndProc - WM_CREATE
+    Creates Factories for Drawing
+    Called in:
+    fft_lines - WndProc - WM_CREATE
 -----------------------------------------------*/
 HRESULT PaintStart()
 {
@@ -101,8 +143,8 @@ HRESULT PaintStart()
 /*-----------------------------------------------
     Unitialization of drawBar2D
 
-    Called on:
-    Error
+    Called in:
+    drawBar2D - HandleError
     fft_lines - WndProc - WM_DESTROY
 -------------------------------------------------*/
 void DiscardGraphicsResources()
@@ -121,17 +163,11 @@ void DiscardGraphicsResources()
 
 
 /*-----------------------------------------------
-    Public Functions
+    Creation of Brushes for drawing Bars
 
-    Initialization of Painting Objects:
-        CreateBarBrush
-        CreateGraphicsResources
-
-    Drawing Functions:
-        DrawBottomBar
-        DrawBackground
-        DrawBars
-        DrawFrameRate
+    Called in:
+    drawBar2D - CreateGraphicsResources
+    settings - SettingsDlgProc - WM_COMMAND - IDC_COMBO_COLORS
 -----------------------------------------------*/
 void CreateBarBrush()
 {
@@ -190,6 +226,12 @@ void CreateBarBrush()
     SafeRelease(&pGradientStops);
 }
 
+/*-----------------------------------------------
+    Creates Render Target and Resources
+
+    Called in:
+    drawBar2D - OnPaint
+-----------------------------------------------*/
 HRESULT CreateGraphicsResources(HWND hwnd)
 {
     HRESULT hr = S_OK;
@@ -258,6 +300,9 @@ HRESULT CreateGraphicsResources(HWND hwnd)
     return hr;
 }
 
+/*-----------------------------------------------
+    Drawing
+-----------------------------------------------*/
 void DrawBottomBar(HWND hwnd)
 {
     WAVEFORMATEX wfx;
@@ -425,46 +470,60 @@ void DrawFrameRate(RECT windowRect, int frameRate)
     pRenderTarget->DrawTextW(buffer, 8, pTextFormat, textRect, pBrush);
 }
 
+HRESULT CallDraws(HWND hwnd, int frameRate)
+{
+    HRESULT hr = S_OK;
+    //windowRect adjusted for bar space
+    RECT windowRect;
+    GetClientRect(hwnd, &windowRect);
+    windowRect.bottom -= bottomBarHeihgt;
+
+    pRenderTarget->BeginDraw();
+
+    //Solid or with Background effect
+    DrawBackground(windowRect);
+    DrawBars(windowRect);
+
+    //windowRect adjusted for bottom bar
+    windowRect.bottom += bottomBarHeihgt;
+    windowRect.top = windowRect.bottom - bottomBarHeihgt;
+
+    if (circle || redrawAll)
+    {
+        DrawBottomBar(hwnd);
+    }
+
+    DrawFrameRate(windowRect, frameRate);
+
+    if (background)
+    {
+        //windowRect adjusted for bar space
+        GetClientRect(hwnd, &windowRect);
+        windowRect.bottom -= bottomBarHeihgt;
+
+        //Creates Bitmap with the current bars which is drawn on next frame with a transform
+        D2D1_POINT_2U upperLeft = D2D1::Point2U(0, 0);
+        D2D1_RECT_U d2d1windowRectU = D2D1::RectU(windowRect.left, windowRect.top, windowRect.right, windowRect.bottom);
+        pBufferBitmap->CopyFromRenderTarget(&upperLeft, pRenderTarget, &d2d1windowRectU);
+    }
+
+    hr = pRenderTarget->EndDraw();
+
+    return hr;
+}
+
+/*-----------------------------------------------
+    Updates Frame
+
+    Called in:
+    fft_lines - WndProc - WM_TIMER
+-----------------------------------------------*/
 void OnPaint(HWND hwnd, int frameRate)
 {
     HRESULT hr = CreateGraphicsResources(hwnd);
     if (SUCCEEDED(hr))
     {
-        //windowRect adjusted for bar space
-        RECT windowRect;
-        GetClientRect(hwnd, &windowRect);
-        windowRect.bottom -= bottomBarHeihgt;
-        
-        pRenderTarget->BeginDraw();
-
-        //Solid or with Background effect
-        DrawBackground(windowRect);
-        DrawBars(windowRect);
-
-        //windowRect adjusted for bottom bar
-        windowRect.bottom += bottomBarHeihgt;
-        windowRect.top = windowRect.bottom - bottomBarHeihgt;
-
-        if (circle)
-        {
-            DrawBottomBar(hwnd);
-        }
-
-        DrawFrameRate(windowRect, frameRate);
-
-        if (background)
-        {
-            //windowRect adjusted for bar space
-            GetClientRect(hwnd, &windowRect);
-            windowRect.bottom -= bottomBarHeihgt;
-
-            //Creates Bitmap with the current bars which is drawn on next frame with a transform
-            D2D1_POINT_2U upperLeft = D2D1::Point2U(0, 0);
-            D2D1_RECT_U d2d1windowRectU = D2D1::RectU(windowRect.left, windowRect.top, windowRect.right, windowRect.bottom);
-            pBufferBitmap->CopyFromRenderTarget(&upperLeft, pRenderTarget, &d2d1windowRectU);
-        }
-
-        hr = pRenderTarget->EndDraw();
+        CallDraws(hwnd, frameRate);
 
         if (FAILED(hr) || hr == D2DERR_RECREATE_TARGET)
         {
@@ -475,32 +534,12 @@ void OnPaint(HWND hwnd, int frameRate)
     }
 }
 
-void Redraw(HWND hwnd)
-{
-    HRESULT hr = S_OK;
-    RECT windowRect;
-    GetClientRect(hwnd, &windowRect);
+/*-----------------------------------------------
+    Resize Window and background Bitmap
 
-    pRenderTarget->BeginDraw();
-
-    //Same as in OnPaint() done here for new size (no flickering)
-    windowRect.bottom -= bottomBarHeihgt;
-
-    DrawBackground(windowRect);
-    DrawBars(windowRect);
-
-    DrawBottomBar(hwnd);
-
-    hr = pRenderTarget->EndDraw();
-
-    if (FAILED(hr) || hr == D2DERR_RECREATE_TARGET)
-    {
-        WCHAR message[20] = L"Failed to redraw";
-        SendMessageW(globalhwnd, WM_ERROR, (WPARAM)&message, NULL);
-        DiscardGraphicsResources();
-    }
-}
-
+    Called in:
+    fft_lines - WndProc - WM_SIZE
+-----------------------------------------------*/
 void Resize(HWND hwnd)
 {
     if (pRenderTarget != NULL)
@@ -524,11 +563,11 @@ void Resize(HWND hwnd)
 
         hr = pBufferBitmap->CopyFromBitmap(&destPoint, pPreviousBitmap, &windowRectU);
         SafeRelease(&pPreviousBitmap);
-        
-        Redraw(hwnd);
 
         previousWindowRect = windowRectU;
         previousSize = size;
+
+        redrawAll = true;
 
         if (FAILED(hr) || hr == D2DERR_RECREATE_TARGET)
         {

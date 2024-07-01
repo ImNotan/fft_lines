@@ -49,6 +49,8 @@ extern bool ignoreSerial;
 extern bool circle;
 extern bool waveform;
 
+extern bool redrawAll;
+
 extern const int bottomBarHeihgt;
 extern const int led_bar;
 
