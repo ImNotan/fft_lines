@@ -11,7 +11,6 @@ extern "C"
     #include "global.h"
 }
 
-
 #pragma comment(lib, "d2d1.lib")
 #pragma comment(lib, "dwrite.lib")
 
@@ -23,7 +22,6 @@ template <class T> void SafeRelease(T** ppT)
         *ppT = NULL;
     }
 }
-
 
 ID2D1Factory* pFactory;
 ID2D1HwndRenderTarget* pRenderTarget;
@@ -47,8 +45,26 @@ extern "C" void    Resize(HWND hwnd);
 extern "C" void    CreateBarBrush();
 extern "C" void    Redraw(HWND hwnd);
 
-//Creates Factorys for Drawing
-//Called once in fft_lines.c - WndProc - WM_CREATE
+/*-----------------------------------------------
+    Error Handling
+-----------------------------------------------*/
+void HandleError(HRESULT hr)
+{
+    if (FAILED(hr))
+    {
+        WCHAR message[50];
+        wsprintfW(message, L"An Error has occured while painting: %x", hr);
+        SendMessageW(globalhwnd, WM_ERROR, (WPARAM)&message, NULL);
+        DiscardGraphicsResources();
+    }
+}
+
+/*-----------------------------------------------
+    Initialization of drawBar2D
+
+    Creates Factorys for Drawing
+    Called once in fft_lines.c - WndProc - WM_CREATE
+-----------------------------------------------*/
 HRESULT PaintStart()
 {
     previousSize = D2D1::SizeU(0, 0);
@@ -57,6 +73,8 @@ HRESULT PaintStart()
     HRESULT hr = S_OK;
 
     hr = DWriteCreateFactory(DWRITE_FACTORY_TYPE_SHARED, __uuidof(pWriteFactory), reinterpret_cast<IUnknown**>(&pWriteFactory));
+    HandleError(hr);
+
     hr = pWriteFactory->CreateTextFormat(
         L"Verdana",
         NULL,
@@ -66,24 +84,27 @@ HRESULT PaintStart()
         12,
         L"",
         &pTextFormat);
+    HandleError(hr);
 
     hr = pTextFormat->SetTextAlignment(DWRITE_TEXT_ALIGNMENT_CENTER);
+    HandleError(hr);
 
     hr = pTextFormat->SetParagraphAlignment(DWRITE_PARAGRAPH_ALIGNMENT_CENTER);
+    HandleError(hr);
 
     hr = D2D1CreateFactory(D2D1_FACTORY_TYPE_SINGLE_THREADED, &pFactory);
-
-    if (FAILED(hr) || hr == D2DERR_RECREATE_TARGET)
-    {
-        WCHAR message[23] = L"Failed to start paint";
-        SendMessageW(globalhwnd, WM_ERROR, (WPARAM)&message, NULL);
-        DiscardGraphicsResources();
-    }
+    HandleError(hr);
 
     return hr;
 }
 
+/*-----------------------------------------------
+    Unitialization of drawBar2D
 
+    Called on:
+    Error
+    fft_lines - WndProc - WM_DESTROY
+-------------------------------------------------*/
 void DiscardGraphicsResources()
 {
     SafeRelease(&pBrush);
@@ -98,6 +119,20 @@ void DiscardGraphicsResources()
     SafeRelease(&pWriteFactory);
 }
 
+
+/*-----------------------------------------------
+    Public Functions
+
+    Initialization of Painting Objects:
+        CreateBarBrush
+        CreateGraphicsResources
+
+    Drawing Functions:
+        DrawBottomBar
+        DrawBackground
+        DrawBars
+        DrawFrameRate
+-----------------------------------------------*/
 void CreateBarBrush()
 {
     //Creates 256 different colored Brushes
@@ -167,9 +202,11 @@ HRESULT CreateGraphicsResources(HWND hwnd)
         D2D1_SIZE_U size = D2D1::SizeU(windowRect.right, windowRect.bottom);
 
         hr = pFactory->CreateHwndRenderTarget(
-            D2D1::RenderTargetProperties(),
-            D2D1::HwndRenderTargetProperties(hwnd, size, D2D1_PRESENT_OPTIONS_RETAIN_CONTENTS),
+            D2D1::RenderTargetProperties(D2D1_RENDER_TARGET_TYPE_HARDWARE, D2D1::PixelFormat(DXGI_FORMAT_UNKNOWN, D2D1_ALPHA_MODE_IGNORE)),
+            D2D1::HwndRenderTargetProperties(hwnd, size, D2D1_PRESENT_OPTIONS_NONE),
             &pRenderTarget);
+
+        pRenderTarget->SetTextAntialiasMode(D2D1_TEXT_ANTIALIAS_MODE_GRAYSCALE);
 
         //Create resources
         if (SUCCEEDED(hr))

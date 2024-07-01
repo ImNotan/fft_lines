@@ -39,7 +39,7 @@ HWND globalhwnd;
 #define ID_TIMER_UPDATE2 2
 
 //Audio Buffer
-int16_t largeBuffer[2048];
+int16_t* largeBuffer;
 
 //average frame rate calculation variables
 #define MAXSAMPLES 100
@@ -93,6 +93,10 @@ LRESULT CALLBACK WndProc(HWND hwnd, UINT msg, WPARAM wParam, LPARAM lParam)
 
 		//the bar array saves data about every bar
 		bar = (BARINFO*)malloc(barCount * sizeof(BARINFO));
+		largeBuffer = (int16_t*)malloc(N * sizeof(int16_t));
+
+		if (bar == NULL || largeBuffer == NULL)
+			break;
 
 		//Starts Recording Audio
 		initializeRecording();
@@ -110,7 +114,7 @@ LRESULT CALLBACK WndProc(HWND hwnd, UINT msg, WPARAM wParam, LPARAM lParam)
 	{
 		HRESULT hr = S_OK;
 
-		hr = GetAudioBuffer(&largeBuffer);
+		hr = GetAudioBuffer(largeBuffer);
 
 		if (!FAILED(hr))
 		{
@@ -257,6 +261,7 @@ LRESULT CALLBACK WndProc(HWND hwnd, UINT msg, WPARAM wParam, LPARAM lParam)
 
 		//memory
 		free(bar);
+		free(largeBuffer);
 		if(waveform)
 			free(waveBar);
 

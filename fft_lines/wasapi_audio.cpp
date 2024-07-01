@@ -340,7 +340,9 @@ HRESULT GetAudioBuffer(int16_t* buffer)
         else
         {
             LONG lBytesToWrite = numFramesAvailable * pwfx->nBlockAlign;
-            float f[N];
+            float* f = (float*)malloc(N * sizeof(float));
+            if (f == NULL)
+                return 1;
             //GetBuffer fills pData an Byte array with data
             //4 Bytes of pData create an float
             //pData is alternating between left and right channel
@@ -353,6 +355,7 @@ HRESULT GetAudioBuffer(int16_t* buffer)
             }
             //After that the new data is appended to the previous data which is moved forward to make space for the new data at the end
             MoveArray(buffer, i, f);
+            free(f);
             i = 0;
         }
 
