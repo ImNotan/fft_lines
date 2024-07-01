@@ -74,14 +74,14 @@ Internal functions
         CallDraws
 -----------------------------------------------*/
 
-void HandleError(HRESULT hr);
+void    HandleError(HRESULT hr);
 
 HRESULT CreateGraphicsResources(HWND hwnd);
 
-void DrawBottomBar(HWND hwnd);
-void DrawBackground(RECT windowRect);
-void DrawBars(RECT windowRect);
-void DrawFrameRate(RECT windowRect, int frameRate);
+void    DrawBottomBar(HWND hwnd);
+void    DrawBackground(RECT windowRect);
+void    DrawBars(RECT windowRect);
+void    DrawFrameRate(RECT windowRect, int frameRate);
 HRESULT CallDraws(HWND hwnd, int frameRate);
 
 

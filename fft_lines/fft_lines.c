@@ -20,8 +20,6 @@
 HRESULT initializeRecording();
 void	uninitializeRecording();
 HRESULT GetAudioBuffer(int16_t* buffer);
-HRESULT startRecording();
-void	Exit();
 
 //Define drawBar2D.cpp functions for drawing on screen with Direct2D
 void    DiscardGraphicsResources();
@@ -100,7 +98,6 @@ LRESULT CALLBACK WndProc(HWND hwnd, UINT msg, WPARAM wParam, LPARAM lParam)
 
 		//Starts Recording Audio
 		initializeRecording();
-		startRecording();
 
 		//Initializes graphics resources in drawBar2D.cpp
 		OnPaint(hwnd, 1);
@@ -270,7 +267,6 @@ LRESULT CALLBACK WndProc(HWND hwnd, UINT msg, WPARAM wParam, LPARAM lParam)
 
 		//stops recording
 		uninitializeRecording();
-		Exit();
 
 		//stops Serial transfer
 		if(doSerial)

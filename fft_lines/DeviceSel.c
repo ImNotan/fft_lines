@@ -9,7 +9,6 @@ HRESULT getAudioDeviceNames(unsigned int deviceNumber, wchar_t* deviceName);
 HRESULT getAudioDeviceCount(unsigned int* count);
 HRESULT startRecording();
 HRESULT stopRecording();
-HRESULT initializeRecording();
 HRESULT ChangeAudioStream(unsigned int deviceNumber);
 
 HWND DeviceSelDlg = NULL;
