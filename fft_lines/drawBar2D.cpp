@@ -50,12 +50,12 @@ Public functions
         Resize
 -----------------------------------------------*/
 
-extern "C" HRESULT PaintStart();
-extern "C" void    DiscardGraphicsResources();
-extern "C" void    CreateBarBrush();
+extern "C" void PaintStart();
+extern "C" void DiscardGraphicsResources();
+extern "C" void CreateBarBrush();
 
-extern "C" void    OnPaint(HWND hwnd, int frameRate);
-extern "C" void    Resize(HWND hwnd);
+extern "C" void OnPaint(HWND hwnd, int frameRate);
+extern "C" void Resize(HWND hwnd);
 
 /*-----------------------------------------------
 Internal functions
@@ -74,15 +74,15 @@ Internal functions
         CallDraws
 -----------------------------------------------*/
 
-void    HandleError(HRESULT hr);
+inline void HandleError(HRESULT hr);
 
-HRESULT CreateGraphicsResources(HWND hwnd);
+void CreateGraphicsResources(HWND hwnd);
 
-void    DrawBottomBar(HWND hwnd);
-void    DrawBackground(RECT windowRect);
-void    DrawBars(RECT windowRect);
-void    DrawFrameRate(RECT windowRect, int frameRate);
-HRESULT CallDraws(HWND hwnd, int frameRate);
+void DrawBottomBar(HWND hwnd);
+void DrawBackground(RECT windowRect);
+void DrawBars(RECT windowRect);
+void DrawFrameRate(RECT windowRect, int frameRate);
+void CallDraws(HWND hwnd, int frameRate);
 
 
 
@@ -96,7 +96,6 @@ void HandleError(HRESULT hr)
         WCHAR message[50];
         wsprintfW(message, L"An Error has occured while painting: %x", hr);
         SendMessageW(globalhwnd, WM_ERROR, (WPARAM)&message, NULL);
-        DiscardGraphicsResources();
     }
 }
 
@@ -107,7 +106,7 @@ void HandleError(HRESULT hr)
     Called in:
     fft_lines - WndProc - WM_CREATE
 -----------------------------------------------*/
-HRESULT PaintStart()
+void PaintStart()
 {
     previousSize = D2D1::SizeU(0, 0);
     previousWindowRect = D2D1::RectU(0, 0, 0, 0);
@@ -136,8 +135,6 @@ HRESULT PaintStart()
 
     hr = D2D1CreateFactory(D2D1_FACTORY_TYPE_SINGLE_THREADED, &pFactory);
     HandleError(hr);
-
-    return hr;
 }
 
 /*-----------------------------------------------
@@ -200,6 +197,7 @@ void CreateBarBrush()
             D2D1_EXTEND_MODE_CLAMP,
             &pGradientStops
         );
+        HandleError(hr);
 
         hr = pRenderTarget->CreateLinearGradientBrush(
             D2D1::LinearGradientBrushProperties(
@@ -208,19 +206,14 @@ void CreateBarBrush()
             pGradientStops,
             &pbarBrushGradient[i]
         );
+        HandleError(hr);
 
         //Solid
         color = D2D1::ColorF((float)pGradients[j], (float)pGradients[j + 1], (float)pGradients[j + 2], 1.0f);
         hr = pRenderTarget->CreateSolidColorBrush(color, &pbarBrushSolid[i]);
+        HandleError(hr);
 
         j += 3;
-
-        if (FAILED(hr) || hr == D2DERR_RECREATE_TARGET)
-        {
-            WCHAR message[24] = L"Failed to create brush";
-            SendMessageW(globalhwnd, WM_ERROR, (WPARAM)&message, NULL);
-            DiscardGraphicsResources();
-        }
     }
 
     SafeRelease(&pGradientStops);
@@ -232,7 +225,7 @@ void CreateBarBrush()
     Called in:
     drawBar2D - OnPaint
 -----------------------------------------------*/
-HRESULT CreateGraphicsResources(HWND hwnd)
+void CreateGraphicsResources(HWND hwnd)
 {
     HRESULT hr = S_OK;
     if (pRenderTarget == NULL)
@@ -247,6 +240,7 @@ HRESULT CreateGraphicsResources(HWND hwnd)
             D2D1::RenderTargetProperties(D2D1_RENDER_TARGET_TYPE_HARDWARE, D2D1::PixelFormat(DXGI_FORMAT_UNKNOWN, D2D1_ALPHA_MODE_IGNORE)),
             D2D1::HwndRenderTargetProperties(hwnd, size, D2D1_PRESENT_OPTIONS_NONE),
             &pRenderTarget);
+        HandleError(hr);
 
         pRenderTarget->SetTextAntialiasMode(D2D1_TEXT_ANTIALIAS_MODE_GRAYSCALE);
 
@@ -256,9 +250,11 @@ HRESULT CreateGraphicsResources(HWND hwnd)
             //General Brush
             D2D1_COLOR_F color = D2D1::ColorF(D2D1::ColorF(0.5f, 0.5f, 0.5f));
             hr = pRenderTarget->CreateSolidColorBrush(color, &pBrush);
+            HandleError(hr);
 
             //Bitmap for background effect
             hr = pRenderTarget->CreateBitmap(size, D2D1::BitmapProperties(D2D1::PixelFormat(DXGI_FORMAT_B8G8R8A8_UNORM, D2D1_ALPHA_MODE_IGNORE)), &pBufferBitmap);
+            HandleError(hr);
 
             ID2D1GradientStopCollection* pGradientStops;
             D2D1_GRADIENT_STOP gradientStops[2];
@@ -275,6 +271,7 @@ HRESULT CreateGraphicsResources(HWND hwnd)
                 D2D1_EXTEND_MODE_CLAMP,
                 &pGradientStops
             );
+            HandleError(hr);
 
             hr = pRenderTarget->CreateRadialGradientBrush(
                 D2D1::RadialGradientBrushProperties(
@@ -285,19 +282,11 @@ HRESULT CreateGraphicsResources(HWND hwnd)
                 pGradientStops,
                 &pradialBrush
             );
+            HandleError(hr);
 
             CreateBarBrush();
         }
     }
-    
-    if (FAILED(hr) || hr == D2DERR_RECREATE_TARGET)
-    {
-        WCHAR message[37] = L"Failed to create graphics resources";
-        SendMessageW(globalhwnd, WM_ERROR, (WPARAM)&message, NULL);
-        DiscardGraphicsResources();
-    }
-
-    return hr;
 }
 
 /*-----------------------------------------------
@@ -308,7 +297,6 @@ void DrawBottomBar(HWND hwnd)
     WAVEFORMATEX wfx;
     getWaveFormat(&wfx);
 
-    HRESULT hr = S_OK;
     RECT windowRect;
 
     GetClientRect(hwnd, &windowRect);
@@ -470,7 +458,7 @@ void DrawFrameRate(RECT windowRect, int frameRate)
     pRenderTarget->DrawTextW(buffer, 8, pTextFormat, textRect, pBrush);
 }
 
-HRESULT CallDraws(HWND hwnd, int frameRate)
+void CallDraws(HWND hwnd, int frameRate)
 {
     HRESULT hr = S_OK;
     //windowRect adjusted for bar space
@@ -508,8 +496,7 @@ HRESULT CallDraws(HWND hwnd, int frameRate)
     }
 
     hr = pRenderTarget->EndDraw();
-
-    return hr;
+    HandleError(hr);
 }
 
 /*-----------------------------------------------
@@ -520,18 +507,9 @@ HRESULT CallDraws(HWND hwnd, int frameRate)
 -----------------------------------------------*/
 void OnPaint(HWND hwnd, int frameRate)
 {
-    HRESULT hr = CreateGraphicsResources(hwnd);
-    if (SUCCEEDED(hr))
-    {
-        CallDraws(hwnd, frameRate);
-
-        if (FAILED(hr) || hr == D2DERR_RECREATE_TARGET)
-        {
-            WCHAR message[22] = L"Failed to draw frame";
-            SendMessageW(globalhwnd, WM_ERROR, (WPARAM)&message, NULL);
-            DiscardGraphicsResources();
-        }
-    }
+    CreateGraphicsResources(hwnd);
+   
+    CallDraws(hwnd, frameRate);
 }
 
 /*-----------------------------------------------
@@ -545,35 +523,36 @@ void Resize(HWND hwnd)
     if (pRenderTarget != NULL)
     {
         HRESULT hr = S_OK;
+
         RECT windowRect;
         GetClientRect(hwnd, &windowRect);
         D2D1_RECT_U windowRectU = D2D1::RectU(windowRect.left, windowRect.top, windowRect.right, windowRect.bottom);
 
-        //Resize / Creation of resized Bitmap
+        //Resize render target
         D2D1_SIZE_U size = D2D1::SizeU(windowRect.right, windowRect.bottom);
         hr = pRenderTarget->Resize(size);
+        HandleError(hr);
 
+        // Creation of resized Bitmap
         ID2D1Bitmap* pPreviousBitmap;
         D2D1_POINT_2U destPoint = D2D1::Point2U(0, 0);
         hr = pRenderTarget->CreateBitmap(previousSize, D2D1::BitmapProperties(D2D1::PixelFormat(DXGI_FORMAT_B8G8R8A8_UNORM, D2D1_ALPHA_MODE_IGNORE)), &pPreviousBitmap);
+        HandleError(hr);
         hr = pPreviousBitmap->CopyFromBitmap(&destPoint, pBufferBitmap, &previousWindowRect);
+        HandleError(hr);
 
         SafeRelease(&pBufferBitmap);
         hr = pRenderTarget->CreateBitmap(size, D2D1::BitmapProperties(D2D1::PixelFormat(DXGI_FORMAT_B8G8R8A8_UNORM, D2D1_ALPHA_MODE_IGNORE)), &pBufferBitmap);
+        HandleError(hr);
 
         hr = pBufferBitmap->CopyFromBitmap(&destPoint, pPreviousBitmap, &windowRectU);
         SafeRelease(&pPreviousBitmap);
+        HandleError(hr);
 
         previousWindowRect = windowRectU;
         previousSize = size;
 
+        //redraw bottombar on next call in CallDraws
         redrawAll = true;
-
-        if (FAILED(hr) || hr == D2DERR_RECREATE_TARGET)
-        {
-            WCHAR message[20] = L"Failed to resize";
-            SendMessageW(globalhwnd, WM_ERROR, (WPARAM)&message, NULL);
-            DiscardGraphicsResources();
-        }
     }
 }

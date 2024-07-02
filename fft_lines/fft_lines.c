@@ -17,15 +17,15 @@
 #include "showerror.h"
 
 //Define wasapi_audio.cpp functions for audio recording with WASAPI
-HRESULT initializeRecording();
-void	uninitializeRecording();
-HRESULT GetAudioBuffer(int16_t* buffer);
+void initializeRecording();
+void uninitializeRecording();
+void GetAudioBuffer(int16_t* buffer);
 
 //Define drawBar2D.cpp functions for drawing on screen with Direct2D
-void    DiscardGraphicsResources();
-void    OnPaint(HWND hwnd, int frameRate);
-HRESULT PaintStart();
-void	Resize(HWND hwnd);
+void DiscardGraphicsResources();
+void OnPaint(HWND hwnd, int frameRate);
+void PaintStart();
+void Resize(HWND hwnd);
 
 const char g_szClassName[] = "myWindowClass";
 
@@ -109,84 +109,79 @@ LRESULT CALLBACK WndProc(HWND hwnd, UINT msg, WPARAM wParam, LPARAM lParam)
 	break;
 	case WM_TIMER:
 	{
-		HRESULT hr = S_OK;
+		GetAudioBuffer(largeBuffer);
 
-		hr = GetAudioBuffer(largeBuffer);
+		//Calculates fourier transfor of audio data
+		fftwf_complex* input;
+		fftwf_complex* output;
 
-		if (!FAILED(hr))
+		input = (fftwf_complex*)malloc(N * sizeof(fftwf_complex));
+		output = (fftwf_complex*)malloc(N * sizeof(fftwf_complex));
+
+		if (input && output)
 		{
-			//Calculates fourier transfor of audio data
-			fftwf_complex* input;
-			fftwf_complex* output;
-
-			input = (fftwf_complex*)malloc(N * sizeof(fftwf_complex));
-			output = (fftwf_complex*)malloc(N * sizeof(fftwf_complex));
-
-			if (input && output)
+			for (int i = 0; i < N; i++)
 			{
-				for (int i = 0; i < N; i++)
-				{
-					input[i][REAL] = (float)largeBuffer[i];
-					input[i][IMAG] = 0;
-				}
-
-				fft(input, output);
-
-				//Sets the height of the bars calculated by fourier transfor
-				for (int i = 0; i < barCount; i++)
-				{
-					//Calculates distance to origin with Pythagoras in complex plane
-					bar[i].height = (int)(sqrt(pow(output[i][REAL], 2) + pow(output[i][IMAG], 2)) * zoom);
-
-					if (circle)
-					{
-						bar[i].height += 10;
-					}
-				}
-
-				free(input);
-				free(output);
+				input[i][REAL] = (float)largeBuffer[i];
+				input[i][IMAG] = 0;
 			}
-			else
+
+			fft(input, output);
+
+			//Sets the height of the bars calculated by fourier transfor
+			for (int i = 0; i < barCount; i++)
 			{
-				MessageBoxA(hwnd, "Failed to allocate memory for input or output", "Warning", MB_OK);
-				SendMessageW(hwnd, WM_DESTROY, NULL, NULL);
-			}
-			
-			//Copys audio buffer
-			if(waveform)
-			{
-				RECT windowRect;
-				GetClientRect(hwnd, &windowRect);
-				for (int i = 0; i < N; i++)
+				//Calculates distance to origin with Pythagoras in complex plane
+				bar[i].height = (int)(sqrt(pow(output[i][REAL], 2) + pow(output[i][IMAG], 2)) * zoom);
+
+				if (circle)
 				{
-					waveBar[i].height = largeBuffer[i] * 0.01f + (windowRect.bottom - bottomBarHeihgt) / 2 + 50;
+					bar[i].height += 10;
 				}
 			}
 
-			//Prints to serial
-			if (bar[led_bar].height >= 0 && doSerial)
-			{
-				char line[1];
-				line[0] = (char)((float)bar[led_bar].height * 0.1f);
-				WriteSerial(line, globalhwnd);
-			}
-
-
-			//Calculate fps
-			QueryPerformanceCounter(&EndingTime);
-			ElapsedMicroseconds.QuadPart = EndingTime.QuadPart - StartingTime.QuadPart;
-
-			ElapsedMicroseconds.QuadPart *= 1000000;
-			ElapsedMicroseconds.QuadPart /= Frequency.QuadPart;
-
-			double averageTick = CalcAverageTick((int)(ElapsedMicroseconds.QuadPart));
-			frameRate = 1000000 / averageTick;
-
-			QueryPerformanceCounter(&StartingTime);
-
-			OnPaint(hwnd, frameRate);
+			free(input);
+			free(output);
 		}
+		else
+		{
+			MessageBoxA(hwnd, "Failed to allocate memory for input or output", "Warning", MB_OK);
+			SendMessageW(hwnd, WM_DESTROY, NULL, NULL);
+		}
+			
+		//Copys audio buffer
+		if(waveform)
+		{
+			RECT windowRect;
+			GetClientRect(hwnd, &windowRect);
+			for (int i = 0; i < N; i++)
+			{
+				waveBar[i].height = largeBuffer[i] * 0.01f + (windowRect.bottom - bottomBarHeihgt) / 2 + 50;
+			}
+		}
+
+		//Prints to serial
+		if (bar[led_bar].height >= 0 && doSerial)
+		{
+			char line[1];
+			line[0] = (char)((float)bar[led_bar].height * 0.1f);
+			WriteSerial(line, globalhwnd);
+		}
+
+
+		//Calculate fps
+		QueryPerformanceCounter(&EndingTime);
+		ElapsedMicroseconds.QuadPart = EndingTime.QuadPart - StartingTime.QuadPart;
+
+		ElapsedMicroseconds.QuadPart *= 1000000;
+		ElapsedMicroseconds.QuadPart /= Frequency.QuadPart;
+
+		double averageTick = CalcAverageTick((int)(ElapsedMicroseconds.QuadPart));
+		frameRate = 1000000 / averageTick;
+
+		QueryPerformanceCounter(&StartingTime);
+
+		OnPaint(hwnd, frameRate);
 	}
 	break;
 	case WM_COMMAND:
@@ -248,6 +243,7 @@ LRESULT CALLBACK WndProc(HWND hwnd, UINT msg, WPARAM wParam, LPARAM lParam)
 	case WM_ERROR:
 	{
 		MessageBoxW(hwnd, (WCHAR*)wParam, L"An Error has occured", MB_OK | MB_APPLMODAL | MB_ICONERROR);
+		SendMessageW(hwnd, WM_DESTROY, NULL, NULL);
 	}
 	break;
 	case WM_CLOSE:

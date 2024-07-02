@@ -6,7 +6,11 @@
 #include <iostream>
 #include <Functiondiscoverykeys_devpkey.h>
 #include <strsafe.h>
-#include "global.h"
+
+extern "C"
+{
+    #include "global.h"
+}
 
 #include "wasapi_audio.h"
 
@@ -15,10 +19,7 @@ using namespace std;
 #pragma comment(lib, "Winmm.lib")
 
 // REFERENCE_TIME time units per second and per millisecond
-#define REFTIMES_PER_SEC  500000
-
-#define EXIT_ON_ERROR(hres)  \
-                  if (FAILED(hres)) { return hr; }
+#define REFTIMES_PER_SEC  50000
 
 #define SAFE_RELEASE(punk)  \
                   if ((punk) != NULL)  \
@@ -29,10 +30,9 @@ const IID IID_IMMDeviceEnumerator = __uuidof(IMMDeviceEnumerator);
 const IID IID_IAudioClient = __uuidof(IAudioClient);
 const IID IID_IAudioCaptureClient = __uuidof(IAudioCaptureClient);
 
-REFERENCE_TIME hnsRequestedDuration = REFTIMES_PER_SEC;
-REFERENCE_TIME hnsActualDuration;
-UINT32 bufferFrameCount;
-
+/*-----------------------------------------------
+    Internal Objects
+-----------------------------------------------*/
 IMMDeviceEnumerator* pEnumerator = NULL;
 IMMDevice* pDevice = NULL;
 IAudioClient* pAudioClient = NULL;
@@ -58,20 +58,23 @@ Public functions
         GetAudioBuffer
 -----------------------------------------------*/
 
-extern "C" HRESULT  initializeRecording();
-extern "C" void     uninitializeRecording();
-extern "C" HRESULT  startRecording();
-extern "C" HRESULT  stopRecording();
+extern "C" void initializeRecording();
+extern "C" void uninitializeRecording();
+extern "C" void startRecording();
+extern "C" void stopRecording();
 
-extern "C" HRESULT  getAudioDeviceCount(unsigned int* count);
-extern "C" HRESULT  getAudioDeviceNames(unsigned int deviceNumber, wchar_t* deviceName);
-extern "C" HRESULT  ChangeAudioStream(unsigned int deviceNumber);
-void                getWaveFormat(WAVEFORMATEX * waveformat);
+extern "C" void getAudioDeviceCount(unsigned int* count);
+extern "C" void getAudioDeviceNames(unsigned int deviceNumber, wchar_t* deviceName);
+extern "C" void ChangeAudioStream(unsigned int deviceNumber);
+void            getWaveFormat(WAVEFORMATEX * waveformat);
 
-extern "C" HRESULT  GetAudioBuffer(int16_t * buffer);
+extern "C" void GetAudioBuffer(int16_t * buffer);
 
 /*-----------------------------------------------
 Internal functions
+
+    Error Handling:
+        HandleError
 
     Initialization:
         InitializeAudioStream
@@ -80,10 +83,26 @@ Internal functions
         MoveArray
 -----------------------------------------------*/
 
-HRESULT InitializeAudioStream();
-HRESULT MoveArray(int16_t * destination, int addCount, float* source);
+inline void HandleError(HRESULT hr);
+
+void InitializeAudioStream();
+
+void MoveArray(int16_t * destination, int addCount, float* source);
 
 
+
+/*-----------------------------------------------
+    Error Handling
+-----------------------------------------------*/
+void HandleError(HRESULT hr)
+{
+    if (FAILED(hr))
+    {
+        WCHAR message[50];
+        wsprintfW(message, L"An Error with the Audio has occured: %x", hr);
+        SendMessageW(globalhwnd, WM_ERROR, (WPARAM)&message, NULL);
+    }
+}
 
 /*-----------------------------------------------
     Initialization of wasapi_audio
@@ -91,15 +110,14 @@ HRESULT MoveArray(int16_t * destination, int addCount, float* source);
     Called in:
     fft_lines - WndProc - WM_CREATE
 -----------------------------------------------*/
-HRESULT initializeRecording()
+void initializeRecording()
 {
     HRESULT hr = S_OK;
     hr = CoInitializeEx(NULL, COINIT_MULTITHREADED);
-    EXIT_ON_ERROR(hr);
-    hr = InitializeAudioStream();
-    EXIT_ON_ERROR(hr);
+    HandleError(hr);
+
+    InitializeAudioStream();
     startRecording();
-    return hr;
 }
 
 /*-----------------------------------------------
@@ -121,11 +139,11 @@ void uninitializeRecording()
     wasapi_audio - initializeRecording
     DeviceSel - DeviceSelProc - IDC_BUTTON_CHANGE
 -----------------------------------------------*/
-HRESULT startRecording()
+void startRecording()
 {
     HRESULT hr = S_OK;
     hr = pAudioClient->Start();
-    return hr;
+    HandleError(hr);
 }
 
 /*-----------------------------------------------
@@ -135,16 +153,17 @@ HRESULT startRecording()
     wasapi_audio - uninitializeRecording
     DeviceSel - DeviceSelProc - IDC_BUTTON_CHANGE
 -----------------------------------------------*/
-HRESULT stopRecording()
+void stopRecording()
 {
     HRESULT hr = S_OK;
     hr = pAudioClient->Stop();
+    HandleError(hr);
+
     CoTaskMemFree(pwfx);
     SAFE_RELEASE(pEnumerator)
         SAFE_RELEASE(pDevice)
         SAFE_RELEASE(pAudioClient)
         SAFE_RELEASE(pCaptureClient)
-        return hr;
 }
 
 /*-----------------------------------------------
@@ -153,26 +172,28 @@ HRESULT stopRecording()
     Called in:
     wasapi_audio - initializeRecording
 -----------------------------------------------*/
-HRESULT InitializeAudioStream()
+void InitializeAudioStream()
 {
     HRESULT hr = S_OK;
+    REFERENCE_TIME hnsRequestedDuration = REFTIMES_PER_SEC;
+
     hr = CoCreateInstance(
         CLSID_MMDeviceEnumerator, NULL,
         CLSCTX_ALL, IID_IMMDeviceEnumerator,
         (void**)&pEnumerator);
-    EXIT_ON_ERROR(hr);
+    HandleError(hr);
 
     hr = pEnumerator->GetDefaultAudioEndpoint(
         eRender, eConsole, &pDevice);
-    EXIT_ON_ERROR(hr);
+    HandleError(hr);
 
     hr = pDevice->Activate(
         IID_IAudioClient, CLSCTX_ALL,
         NULL, (void**)&pAudioClient);
-    EXIT_ON_ERROR(hr);
+    HandleError(hr);
 
     hr = pAudioClient->GetMixFormat(&pwfx);
-    EXIT_ON_ERROR(hr);
+    HandleError(hr);
 
     hr = pAudioClient->Initialize(
         AUDCLNT_SHAREMODE_SHARED,
@@ -181,22 +202,12 @@ HRESULT InitializeAudioStream()
         0,
         pwfx,
         NULL);
-    EXIT_ON_ERROR(hr);
-
-    // Get the size of the allocated buffer.
-    hr = pAudioClient->GetBufferSize(&bufferFrameCount);
-    EXIT_ON_ERROR(hr);
+    HandleError(hr);
 
     hr = pAudioClient->GetService(
         IID_IAudioCaptureClient,
         (void**)&pCaptureClient);
-    EXIT_ON_ERROR(hr);
-
-    // Calculate the actual duration of the allocated buffer.
-    //hnsActualDuration = (double)REFTIMES_PER_SEC *
-    //	bufferFrameCount / pwfx->nSamplesPerSec;
-
-    return hr;
+    HandleError(hr);
 }
 
 /*-----------------------------------------------
@@ -205,15 +216,16 @@ HRESULT InitializeAudioStream()
     Called in:
     DeviceSel - DeviceSelProc - WM_INITDIALOG
 -----------------------------------------------*/
-HRESULT getAudioDeviceCount(unsigned int* count)
+void getAudioDeviceCount(unsigned int* count)
 {
     HRESULT hr = S_OK;
     IMMDeviceCollection* allDevices;
 
     hr = pEnumerator->EnumAudioEndpoints(eAll, DEVICE_STATE_ACTIVE, &allDevices);
-    EXIT_ON_ERROR(hr);
+    HandleError(hr);
+
     hr = allDevices->GetCount(count);
-    return hr;
+    HandleError(hr);
 }
 
 /*-----------------------------------------------
@@ -222,7 +234,7 @@ HRESULT getAudioDeviceCount(unsigned int* count)
     Called in:
     DeviceSel - DeviceSelProc - WM_INITDIALOG
 -----------------------------------------------*/
-HRESULT getAudioDeviceNames(unsigned int deviceNumber, wchar_t* deviceName)
+void getAudioDeviceNames(unsigned int deviceNumber, wchar_t* deviceName)
 {
     HRESULT hr = S_OK;
 
@@ -233,56 +245,34 @@ HRESULT getAudioDeviceNames(unsigned int deviceNumber, wchar_t* deviceName)
     unsigned int count;
 
     hr = pEnumerator->EnumAudioEndpoints(eRender, DEVICE_STATE_ACTIVE, &allDevices);
-    EXIT_ON_ERROR(hr);
+    HandleError(hr);
     hr = allDevices->GetCount(&count);
-    EXIT_ON_ERROR(hr);
-    if (deviceNumber < count)
-    {
-        hr = allDevices->Item(deviceNumber, &OneDevice);
-        EXIT_ON_ERROR(hr);
+    HandleError(hr);
 
-        hr = OneDevice->OpenPropertyStore(STGM_READ, &pProps);
-        EXIT_ON_ERROR(hr);
-
-        PROPVARIANT varName;
-        PropVariantInit(&varName);
-
-        hr = pProps->GetValue(PKEY_Device_FriendlyName, &varName);
-        EXIT_ON_ERROR(hr);
-
-		if (varName.vt != VT_EMPTY)
-		{
-            wstring mystring_w(varName.pwszVal);
-            wstring LPCWSTR_stdstr = mystring_w + L" (output)";
-            lstrcpyW(deviceName, LPCWSTR_stdstr.c_str());
-		}
-    }
-    else if (deviceNumber >= count)
+    if (deviceNumber >= count)
     {
         hr = pEnumerator->EnumAudioEndpoints(eCapture, DEVICE_STATE_ACTIVE, &allDevices);
-        EXIT_ON_ERROR(hr);
+        HandleError(hr);
         deviceNumber -= count;
-
-        hr = allDevices->Item(deviceNumber, &OneDevice);
-        EXIT_ON_ERROR(hr);
-
-        hr = OneDevice->OpenPropertyStore(STGM_READ, &pProps);
-        EXIT_ON_ERROR(hr);
-
-        PROPVARIANT varName;
-        PropVariantInit(&varName);
-
-        hr = pProps->GetValue(PKEY_Device_FriendlyName, &varName);
-        EXIT_ON_ERROR(hr);
-
-        if (varName.vt != VT_EMPTY)
-        {
-            wstring mystring_w(varName.pwszVal);
-            wstring LPCWSTR_stdstr = mystring_w + L" (input)";
-            lstrcpyW(deviceName, LPCWSTR_stdstr.c_str());
-        }
     }
-    return hr;
+    hr = allDevices->Item(deviceNumber, &OneDevice);
+    HandleError(hr);
+
+    hr = OneDevice->OpenPropertyStore(STGM_READ, &pProps);
+    HandleError(hr);
+
+    PROPVARIANT varName;
+    PropVariantInit(&varName);
+
+    hr = pProps->GetValue(PKEY_Device_FriendlyName, &varName);
+    HandleError(hr);
+
+    if (varName.vt != VT_EMPTY)
+    {
+        wstring mystring_w(varName.pwszVal);
+        wstring LPCWSTR_stdstr = mystring_w + L" (output)";
+        lstrcpyW(deviceName, LPCWSTR_stdstr.c_str());
+    }
 }
 
 /*-----------------------------------------------
@@ -291,30 +281,33 @@ HRESULT getAudioDeviceNames(unsigned int deviceNumber, wchar_t* deviceName)
     Called in:
     DeviceSel - DeviceSelProc - IDC_BUTTON_CHANGE
 -----------------------------------------------*/
-HRESULT ChangeAudioStream(unsigned int deviceNumber)
+void ChangeAudioStream(unsigned int deviceNumber)
 {
     HRESULT hr = S_OK;
     unsigned int count;
 
     IMMDeviceCollection* allDevices;
+    REFERENCE_TIME hnsRequestedDuration = REFTIMES_PER_SEC;
 
     hr = pEnumerator->EnumAudioEndpoints(eRender, DEVICE_STATE_ACTIVE, &allDevices);
-    EXIT_ON_ERROR(hr);
+    HandleError(hr);
     hr = allDevices->GetCount(&count);
-    EXIT_ON_ERROR(hr);
+    HandleError(hr);
+
     if (deviceNumber < count)
     {
         hr = allDevices->Item(deviceNumber, &pDevice);
-        EXIT_ON_ERROR(hr);
+        HandleError(hr);
 
         hr = pDevice->Activate(
             IID_IAudioClient, CLSCTX_ALL,
             NULL, (void**)&pAudioClient);
-        EXIT_ON_ERROR(hr);
+        HandleError(hr);
 
         hr = pAudioClient->GetMixFormat(&pwfx);
-        EXIT_ON_ERROR(hr);
+        HandleError(hr);
 
+        //if it is a speaker use LOOPBACK capture
         hr = pAudioClient->Initialize(
             AUDCLNT_SHAREMODE_SHARED,
             AUDCLNT_STREAMFLAGS_LOOPBACK,
@@ -322,33 +315,29 @@ HRESULT ChangeAudioStream(unsigned int deviceNumber)
             0,
             pwfx,
             NULL);
-        EXIT_ON_ERROR(hr);
-
-        // Get the size of the allocated buffer.
-        hr = pAudioClient->GetBufferSize(&bufferFrameCount);
-        EXIT_ON_ERROR(hr);
+        HandleError(hr);
 
         hr = pAudioClient->GetService(
             IID_IAudioCaptureClient,
             (void**)&pCaptureClient);
-        EXIT_ON_ERROR(hr);
+        HandleError(hr);
     }
     else if (deviceNumber >= count)
     {
         hr = pEnumerator->EnumAudioEndpoints(eCapture, DEVICE_STATE_ACTIVE, &allDevices);
-        EXIT_ON_ERROR(hr);
+        HandleError(hr);
         deviceNumber -= count;
 
         hr = allDevices->Item(deviceNumber, &pDevice);
-        EXIT_ON_ERROR(hr);
+        HandleError(hr);
 
         hr = pDevice->Activate(
             IID_IAudioClient, CLSCTX_ALL,
             NULL, (void**)&pAudioClient);
-        EXIT_ON_ERROR(hr);
+        HandleError(hr);
 
         hr = pAudioClient->GetMixFormat(&pwfx);
-        EXIT_ON_ERROR(hr);
+        HandleError(hr);
 
         hr = pAudioClient->Initialize(
             AUDCLNT_SHAREMODE_SHARED,
@@ -357,18 +346,13 @@ HRESULT ChangeAudioStream(unsigned int deviceNumber)
             0,
             pwfx,
             NULL);
-        EXIT_ON_ERROR(hr);
-
-        // Get the size of the allocated buffer.
-        hr = pAudioClient->GetBufferSize(&bufferFrameCount);
-        EXIT_ON_ERROR(hr);
+        HandleError(hr);
 
         hr = pAudioClient->GetService(
             IID_IAudioCaptureClient,
             (void**)&pCaptureClient);
-        EXIT_ON_ERROR(hr);
+        HandleError(hr);
     }
-    return hr;
 }
 
 /*-----------------------------------------------
@@ -389,7 +373,7 @@ void getWaveFormat(WAVEFORMATEX* waveformat)
     Called in:
     wasapi_audio - GetAudioBuffer
 -----------------------------------------------*/
-HRESULT MoveArray(int16_t* destination, int addCount, float* source)
+void MoveArray(int16_t* destination, int addCount, float* source)
 {
     for (int k = 0; k < N - addCount; k++)
     {
@@ -399,7 +383,6 @@ HRESULT MoveArray(int16_t* destination, int addCount, float* source)
     {
         destination[k + (N - addCount)] = (int16_t)(source[k] * 65536);
     }
-    return S_OK;
 }
 
 /*-----------------------------------------------
@@ -408,7 +391,7 @@ HRESULT MoveArray(int16_t* destination, int addCount, float* source)
     Called in:
     fft_lines - WndProc - WM_TIMER
 -----------------------------------------------*/
-HRESULT GetAudioBuffer(int16_t* buffer)
+void GetAudioBuffer(int16_t* buffer)
 {
     HRESULT hr = S_OK;
 
@@ -418,7 +401,7 @@ HRESULT GetAudioBuffer(int16_t* buffer)
     UINT packetLength = 0;
 
     hr = pCaptureClient->GetNextPacketSize(&packetLength);
-    EXIT_ON_ERROR(hr);
+    HandleError(hr);
     while(packetLength != 0)
     {
         // Get the available data in the shared buffer.
@@ -426,7 +409,7 @@ HRESULT GetAudioBuffer(int16_t* buffer)
             &pData,
             &numFramesAvailable,
             &flags, NULL, NULL);
-        EXIT_ON_ERROR(hr);
+        HandleError(hr);
 
         if (flags & AUDCLNT_BUFFERFLAGS_SILENT)
         {
@@ -438,7 +421,7 @@ HRESULT GetAudioBuffer(int16_t* buffer)
             LONG lBytesToWrite = numFramesAvailable * pwfx->nBlockAlign;
             float* f = (float*)malloc(N * sizeof(float));
             if (f == NULL)
-                return 1;
+                HandleError(0xffffffff);
             //GetBuffer fills pData an Byte array with data
             //4 Bytes of pData create an float
             //pData is alternating between left and right channel
@@ -455,11 +438,9 @@ HRESULT GetAudioBuffer(int16_t* buffer)
         }
 
         hr = pCaptureClient->ReleaseBuffer(numFramesAvailable);
-        EXIT_ON_ERROR(hr);
+        HandleError(hr);
 
         hr = pCaptureClient->GetNextPacketSize(&packetLength);
-        EXIT_ON_ERROR(hr);
+        HandleError(hr);
     }
-
-    return hr;
 }
