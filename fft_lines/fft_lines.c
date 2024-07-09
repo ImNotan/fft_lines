@@ -14,7 +14,6 @@
 #include "fft_calculate.h"
 #include "settings.h"
 #include "DeviceSel.h"
-#include "showerror.h"
 
 #define FILE_ERROR_CODE 0x00000001
 

@@ -155,7 +155,6 @@
     <ClCompile Include="fft_lines.c" />
     <ClCompile Include="serial.c" />
     <ClCompile Include="settings.c" />
-    <ClCompile Include="showerror.c" />
     <ClCompile Include="wasapi_audio.cpp" />
   </ItemGroup>
   <ItemGroup>
@@ -165,7 +164,6 @@
     <ClInclude Include="resource.h" />
     <ClInclude Include="serial.h" />
     <ClInclude Include="settings.h" />
-    <ClInclude Include="showerror.h" />
     <ClInclude Include="variables.h" />
     <ClInclude Include="wasapi_audio.h" />
   </ItemGroup>
