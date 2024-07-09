@@ -16,16 +16,26 @@
 #include "DeviceSel.h"
 #include "showerror.h"
 
+#define FILE_ERROR_CODE 0x00000001
+
+#define CHECK_NULL(ppT) \
+                  if((ppT) == NULL)  \
+                    { PostMessageW(globalhwnd, WM_ERROR, E_FAIL, FILE_ERROR_CODE); return E_FAIL; }
+
+#define CHECK_ERROR(hr) \
+                  if(FAILED(hr))  \
+                    { PostMessageW(globalhwnd, WM_ERROR, hr, FILE_ERROR_CODE); return hr; }
+
 //Define wasapi_audio.cpp functions for audio recording with WASAPI
-void initializeRecording();
+HRESULT initializeRecording();
 void uninitializeRecording();
-void GetAudioBuffer(int16_t* buffer);
+HRESULT GetAudioBuffer(int16_t* buffer);
 
 //Define drawBar2D.cpp functions for drawing on screen with Direct2D
 void DiscardGraphicsResources();
-void OnPaint(HWND hwnd, int frameRate);
-void PaintStart();
-void Resize(HWND hwnd);
+HRESULT OnPaint(HWND hwnd, int frameRate);
+HRESULT PaintStart();
+HRESULT Resize(HWND hwnd);
 
 const char g_szClassName[] = "myWindowClass";
 
@@ -67,8 +77,12 @@ LRESULT CALLBACK WndProc(HWND hwnd, UINT msg, WPARAM wParam, LPARAM lParam)
 	{
 	case WM_CREATE:
 	{
+		globalhwnd = hwnd;
+
+		HRESULT hr = S_OK;
 		//Initialize Factories in drawBar2D.cpp
-		PaintStart();
+		hr = PaintStart();
+		CHECK_ERROR(hr);
 
 		//Look if User wants Serial and if it is connected
 		if (ignoreSerial)
@@ -93,14 +107,16 @@ LRESULT CALLBACK WndProc(HWND hwnd, UINT msg, WPARAM wParam, LPARAM lParam)
 		bar = (BARINFO*)malloc(barCount * sizeof(BARINFO));
 		largeBuffer = (int16_t*)malloc(N * sizeof(int16_t));
 
-		if (bar == NULL || largeBuffer == NULL)
-			break;
+		CHECK_NULL(bar);
+		CHECK_NULL(largeBuffer);
 
 		//Starts Recording Audio
-		initializeRecording();
+		hr = initializeRecording();
+		CHECK_ERROR(hr);
 
 		//Initializes graphics resources in drawBar2D.cpp
-		OnPaint(hwnd, 1);
+		hr = OnPaint(hwnd, 1);
+		CHECK_ERROR(hr);
 
 		//Sets the update Timer to call every 10ms
 		SetTimer(hwnd, ID_TIMER_UPDATE, 10, NULL);
@@ -109,7 +125,16 @@ LRESULT CALLBACK WndProc(HWND hwnd, UINT msg, WPARAM wParam, LPARAM lParam)
 	break;
 	case WM_TIMER:
 	{
-		GetAudioBuffer(largeBuffer);
+		HRESULT hr = S_OK;
+
+		CHECK_NULL(bar);
+		CHECK_NULL(largeBuffer);
+
+		if (waveform)
+			CHECK_NULL(waveBar);
+
+		hr = GetAudioBuffer(largeBuffer);
+		CHECK_ERROR(hr);
 
 		//Calculates fourier transfor of audio data
 		fftwf_complex* input;
@@ -118,36 +143,32 @@ LRESULT CALLBACK WndProc(HWND hwnd, UINT msg, WPARAM wParam, LPARAM lParam)
 		input = (fftwf_complex*)malloc(N * sizeof(fftwf_complex));
 		output = (fftwf_complex*)malloc(N * sizeof(fftwf_complex));
 
-		if (input && output)
+		CHECK_NULL(input);
+		CHECK_NULL(output);
+
+		for (int i = 0; i < N; i++)
 		{
-			for (int i = 0; i < N; i++)
-			{
-				input[i][REAL] = (float)largeBuffer[i];
-				input[i][IMAG] = 0;
-			}
-
-			fft(input, output);
-
-			//Sets the height of the bars calculated by fourier transfor
-			for (int i = 0; i < barCount; i++)
-			{
-				//Calculates distance to origin with Pythagoras in complex plane
-				bar[i].height = (int)(sqrt(pow(output[i][REAL], 2) + pow(output[i][IMAG], 2)) * zoom);
-
-				if (circle)
-				{
-					bar[i].height += 10;
-				}
-			}
-
-			free(input);
-			free(output);
+			input[i][REAL] = (float)largeBuffer[i];
+			input[i][IMAG] = 0;
 		}
-		else
+
+		fft(input, output);
+
+		//Sets the height of the bars calculated by fourier transfor
+		for (int i = 0; i < barCount; i++)
 		{
-			MessageBoxA(hwnd, "Failed to allocate memory for input or output", "Warning", MB_OK);
-			SendMessageW(hwnd, WM_DESTROY, NULL, NULL);
+			//Calculates distance to origin with Pythagoras in complex plane
+			bar[i].height = (int)(sqrt(pow(output[i][REAL], 2) + pow(output[i][IMAG], 2)) * zoom);
+
+			if (circle)
+			{
+				bar[i].height += 10;
+			}
 		}
+
+		free(input);
+		free(output);
+		
 			
 		//Copys audio buffer
 		if(waveform)
@@ -181,7 +202,8 @@ LRESULT CALLBACK WndProc(HWND hwnd, UINT msg, WPARAM wParam, LPARAM lParam)
 
 		QueryPerformanceCounter(&StartingTime);
 
-		OnPaint(hwnd, frameRate);
+		hr = OnPaint(hwnd, frameRate);
+		CHECK_ERROR(hr);
 	}
 	break;
 	case WM_COMMAND:
@@ -225,11 +247,14 @@ LRESULT CALLBACK WndProc(HWND hwnd, UINT msg, WPARAM wParam, LPARAM lParam)
 		break;
 	case WM_SIZE:
 	{
+		HRESULT hr = S_OK;
+
 		ResizeBars(hwnd, bar, barCount);
 		if (waveform)
 			ResizeBars(hwnd, waveBar, N);
 
-		Resize(hwnd);
+		hr = Resize(hwnd);
+		CHECK_ERROR(hr);
 	}
 	break;
 	case WM_GETMINMAXINFO:
@@ -242,21 +267,23 @@ LRESULT CALLBACK WndProc(HWND hwnd, UINT msg, WPARAM wParam, LPARAM lParam)
 	break;
 	case WM_ERROR:
 	{
-		MessageBoxW(hwnd, (WCHAR*)wParam, L"An Error has occured", MB_OK | MB_APPLMODAL | MB_ICONERROR);
-		SendMessageW(hwnd, WM_DESTROY, NULL, NULL);
+		KillTimer(hwnd, ID_TIMER_UPDATE);
+
+		WCHAR* message[70];
+		wsprintfW(message, L"An Error has occured\nError Code: %x\nFile Code: %x", (int)wParam, (int)lParam);
+		MessageBoxW(NULL, message, L"An Error has occured", MB_OK | MB_ICONERROR | MB_APPLMODAL);
+
+		DestroyWindow(hwnd);
 	}
 	break;
 	case WM_CLOSE:
+	{
 		DestroyWindow(hwnd);
-		break;
+	}
+	break;
 	case WM_DESTROY:
+	{
 		DiscardGraphicsResources();
-
-		//memory
-		free(bar);
-		free(largeBuffer);
-		if(waveform)
-			free(waveBar);
 
 		//write settings to a file
 		writeSettings();
@@ -265,17 +292,26 @@ LRESULT CALLBACK WndProc(HWND hwnd, UINT msg, WPARAM wParam, LPARAM lParam)
 		uninitializeRecording();
 
 		//stops Serial transfer
-		if(doSerial)
+		if (doSerial)
 			CloseSerial(hwnd);
 
 		KillTimer(hwnd, ID_TIMER_UPDATE);
-		
+
 		//Destroy dialog if open
 		DestroyWindow(SettingsDlg);
 		DestroyWindow(DeviceSelDlg);
 
+		//memory
+		if (bar)
+			free(bar);
+		if (largeBuffer)
+			free(largeBuffer);
+		if (waveBar)
+			free(waveBar);
+
 		PostQuitMessage(0);
-		break;
+	}
+	break;
 	default:
 		return DefWindowProc(hwnd, msg, wParam, lParam);
 	}
@@ -323,8 +359,6 @@ int WINAPI WinMain(_In_ HINSTANCE hInstance, _In_opt_ HINSTANCE hPrevInstance, _
 			MB_ICONEXCLAMATION | MB_OK);
 		return 0;
 	}
-
-	globalhwnd = hwnd;
 
 	ShowWindow(hwnd, nCmdShow);
 	UpdateWindow(hwnd);

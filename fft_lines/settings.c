@@ -12,8 +12,12 @@
 #include "global.h"
 #include "serial.h"
 
+#define CHECK_ERROR(hr) \
+                  if(FAILED(hr))  \
+                    { break; }
+
 //Function from drawBar2D.cpp
-void    CreateBarBrush();
+HRESULT CreateBarBrush();
 
 //Define Controls
 #define IDC_LEFT_BARCOUNT_LABEL			(HMENU)1000
@@ -539,11 +543,13 @@ LRESULT CALLBACK SettingsDlgProc(HWND hwnd, UINT Message, WPARAM wParam, LPARAM 
 			{
 			case CBN_SELCHANGE:
 			{
+				HRESULT hr = S_OK;
 				colorSel = SendMessageW((HWND)lParam, (UINT)CB_GETCURSEL,
 					(WPARAM)0, (LPARAM)0);
 
 				setColor();
-				CreateBarBrush();
+				hr = ChangeBarBrush();
+				CHECK_ERROR(hr);
 			}
 			break;
 			}
@@ -576,5 +582,5 @@ LRESULT CALLBACK SettingsDlgProc(HWND hwnd, UINT Message, WPARAM wParam, LPARAM 
 	default:
 		return FALSE;
 	}
-	return TRUE;
+	return 0;
 }
