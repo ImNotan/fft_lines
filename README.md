@@ -16,6 +16,20 @@ This Windows application allows users to visualize the Fast Fourier Transform (F
     -  Wave-mode
 - Additional serial output for led-strip [Arduino Code](https://github.com/ImNotan/fft_lines_arduino)
 
+## Roadmap
+### Completed
+- serial mode with Arduino
+- a bunch of style settings
+- saving settings
+
+### Currently working on
+- Adding propper documentation
+- Improving clarity / cleaning up unused and unnecassary code
+- Adding propper Error handling
+
+### Coming
+- Stereo effect
+
 ## Screenshots
 
 ![fft_lines](https://github.com/ImNotan/fft_lines/assets/66617967/552ea3a5-3716-414e-bc48-687abf54e4ee)
@@ -108,7 +122,3 @@ If you want to build the application from source, follow these steps:
 
 ## Credits
 Inspiration from https://github.com/aiXander/Realtime_PyAudio_FFT
-
-## Contributing
-
-Contributions are welcome! If you have ideas for improvements, new features, or bug fixes, please open an issue or submit a pull request.
