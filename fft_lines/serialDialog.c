@@ -3,7 +3,7 @@
 #include "global.h"
 #include "settingsFile.h"
 
-#define FILE_ERROR_CODE 0x00000010
+#define FILE_ERROR_CODE 0x00000004
 
 #define CHECK_NULL(ppT) \
                   if((ppT) == NULL)  \

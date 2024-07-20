@@ -102,14 +102,12 @@ LRESULT CALLBACK WndProc(HWND hwnd, UINT msg, WPARAM wParam, LPARAM lParam)
 		QueryPerformanceCounter(&StartingTime);
 
 		//Looks for settings file and applies them
-		initializeSettingsFile(hwnd);
+		hr = initializeSettingsFile(hwnd);
+		CHECK_ERROR(hr);
 		readSettings();
 
 		//the bar array saves data about every bar
-		bar = (BARINFO*)malloc(barCount * sizeof(BARINFO));
 		largeBuffer = (int16_t*)malloc(N * sizeof(int16_t));
-
-		CHECK_NULL(bar);
 		CHECK_NULL(largeBuffer);
 
 		//Starts Recording Audio

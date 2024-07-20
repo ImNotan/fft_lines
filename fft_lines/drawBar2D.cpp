@@ -18,7 +18,7 @@ extern "C"
                   if ((ppT) != NULL)  \
                     { (ppT)->Release(); (ppT) = NULL; }
 
-#define FILE_ERROR_CODE 0x00000003
+#define FILE_ERROR_CODE 0x00000101
 
 #define CHECK_NULL(ppT) \
                   if((ppT) == NULL)  \

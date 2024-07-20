@@ -25,7 +25,7 @@ typedef struct _BARINFO
 	int x;
 }BARINFO;
 
-extern void initializeSettingsFile(HWND hwnd);
+extern HRESULT initializeSettingsFile(HWND hwnd);
 extern void uninitializeSettingsFile();
 
 extern void readSettings();

@@ -10,7 +10,7 @@
 #include "global.h"
 #include "settingsFile.h"
 
-#define FILE_ERROR_CODE 0x00000005
+#define FILE_ERROR_CODE 0x00000102
 
 #define CHECK_NULL(ppT) \
                   if((ppT) == NULL)  \
@@ -19,7 +19,6 @@
 #define CHECK_ERROR(hr) \
                   if(FAILED(hr))  \
                     { PostMessageW(globalhwnd, WM_ERROR, hr, FILE_ERROR_CODE); return hr; }
-
 
 
 /*-----------------------------------------------
@@ -61,8 +60,8 @@ defined in settings.h
 		bottomBarheight
 		led_bar
 -----------------------------------------------*/
-BARINFO* bar;
-BARINFO* waveBar;
+BARINFO* bar = NULL;
+BARINFO* waveBar = NULL;
 
 double* pGradients = &plasma;
 
@@ -95,7 +94,7 @@ Public functions
 	manipulation of barsize:
 		ResizeBars
 -----------------------------------------------*/
-void initializeSettingsFile(HWND hwnd);
+HRESULT initializeSettingsFile(HWND hwnd);
 void uninitializeSettingsFile();
 
 void readSettings();
@@ -109,7 +108,6 @@ Internal functions
 	manipulation of variables:
 		setColor
 -----------------------------------------------*/
-void setVariable(char* value, int variableNumber);
 void setColor();
 
 
@@ -119,8 +117,9 @@ void setColor();
 	Called in:
 	fft_lines - WndProc - WM_CREATE
 -----------------------------------------------*/
-void initializeSettingsFile(HWND hwnd)
+HRESULT initializeSettingsFile(HWND hwnd)
 {
+	HRESULT hr = S_OK;
 	hSettingsFile = CreateFileW(L"Settings.txt", GENERIC_READ | GENERIC_WRITE, 0, NULL, OPEN_EXISTING, FILE_ATTRIBUTE_NORMAL, NULL);
 
 	if (hSettingsFile == INVALID_HANDLE_VALUE)
@@ -128,10 +127,11 @@ void initializeSettingsFile(HWND hwnd)
 		hSettingsFile = CreateFileW(L"Settings.txt", GENERIC_READ | GENERIC_WRITE, 0, NULL, CREATE_NEW, FILE_ATTRIBUTE_NORMAL, NULL);
 		if (hSettingsFile == INVALID_HANDLE_VALUE)
 		{
-			MessageBoxW(hwnd, L"fail", L"fail", MB_OK);
-			return;
+			hr = hSettingsFile;
+			CHECK_ERROR(hr);
 		}
 	}
+	return hr;
 }
 
 /*-----------------------------------------------
@@ -182,6 +182,13 @@ void readSettings()
 	if (barCount < MIN_BARCOUNT || barCount > MAX_BARCOUNT)
 		barCount = DEFAULT_BARCOUNT;
 
+	free(bar);
+	BARINFO* tmp = (BARINFO*)realloc(bar, barCount * sizeof(BARINFO));
+	CHECK_NULL(tmp);
+	bar = tmp;
+	ResizeBars(globalhwnd, bar, barCount);
+	redrawAll = true;
+
 	zoom = (float)strtof(pNextNumber, &pNextNumber);
 	if (zoom < MIN_ZOOM || zoom > MAX_ZOOM)
 		zoom = DEFAULT_ZOOM;
@@ -217,21 +224,14 @@ void readSettings()
 
 	if (waveform)
 	{
-		BARINFO* tmp = (BARINFO*)malloc(N * sizeof(BARINFO));
-		if (tmp)
-		{
-			waveBar = tmp;
-			ResizeBars(globalhwnd, waveBar, N);
-		}
-		else
-		{
-			MessageBoxA(globalhwnd, "Failed to allocate memory for bar", "Warning", MB_OK);
-			SendMessageW(globalhwnd, WM_DESTROY, 0, 0);
-		}
+		free(waveBar);
+		BARINFO* tmp = (BARINFO*)realloc(waveBar, N * sizeof(BARINFO));
+		CHECK_NULL(tmp);
+		waveBar = tmp;
+		ResizeBars(globalhwnd, waveBar, N);
 	}
 
 	free(buffer);
-	return 1;
 }
 
 /*-----------------------------------------------

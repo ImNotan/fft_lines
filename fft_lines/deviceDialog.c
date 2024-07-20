@@ -5,7 +5,7 @@
 #include "resource.h"
 #include "global.h"
 
-#define FILE_ERROR_CODE 0x00000007
+#define FILE_ERROR_CODE 0x00000003
 
 #define CHECK_NULL(ppT) \
                   if((ppT) == NULL)  \

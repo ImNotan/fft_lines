@@ -13,7 +13,7 @@
 
 #include "settingsFile.h"
 
-#define FILE_ERROR_CODE 0x00000004
+#define FILE_ERROR_CODE 0x00000002
 
 #define CHECK_NULL(ppT) \
                   if((ppT) == NULL)  \
@@ -257,18 +257,6 @@ LRESULT CALLBACK StyleDialogProc(HWND hwnd, UINT Message, WPARAM wParam, LPARAM 
 				case IDCANCEL:
 				{
 					readSettings();
-					BARINFO* tmp = (BARINFO*)realloc(bar, barCount * sizeof(BARINFO));
-					if (tmp)
-					{
-						bar = tmp;
-						ResizeBars(globalhwnd, bar, barCount);
-						redrawAll = true;
-					}
-					else
-					{
-						MessageBoxA(hwnd, "Failed to allocate memory for bar", "Warning", MB_OK);
-						SendMessageW(globalhwnd, WM_DESTROY, 0, 0);
-					}
 					DestroyWindow(hwndStyleDialog);
 				}
 				break;
@@ -299,7 +287,7 @@ LRESULT CALLBACK StyleDialogProc(HWND hwnd, UINT Message, WPARAM wParam, LPARAM 
 					waveform = !waveform;
 					if (waveform)
 					{
-						BARINFO* tmp = (BARINFO*)malloc(N * sizeof(BARINFO));
+						BARINFO* tmp = (BARINFO*)realloc(waveBar, N * sizeof(BARINFO));
 						CHECK_NULL(tmp);
 
 						waveBar = tmp;
@@ -308,6 +296,7 @@ LRESULT CALLBACK StyleDialogProc(HWND hwnd, UINT Message, WPARAM wParam, LPARAM 
 					else
 					{
 						free(waveBar);
+						waveBar = NULL;
 					}
 				}
 				break;
