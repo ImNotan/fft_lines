@@ -6,7 +6,7 @@
 
 extern "C" 
 {
-    #include "settings.h"
+    #include "settingsFile.h"
     #include "variables.h"
     #include "global.h"
 }
@@ -79,7 +79,6 @@ Public functions
         OnPaint
         Resize
 -----------------------------------------------*/
-
 extern "C" HRESULT PaintStart();
 extern "C" void DiscardGraphicsResources();
 extern "C" HRESULT ChangeBarBrush();
@@ -101,7 +100,6 @@ Internal functions
         DrawFrameRate
         CallDraws
 -----------------------------------------------*/
-
 HRESULT CreateGraphicsResources(HWND hwnd);
 HRESULT CreateBarBrush();
 

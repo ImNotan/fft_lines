@@ -18,10 +18,10 @@
     <ClCompile Include="fft_lines.c">
       <Filter>Source Files</Filter>
     </ClCompile>
-    <ClCompile Include="serial.c">
+    <ClCompile Include="serialDialog.c">
       <Filter>Source Files</Filter>
     </ClCompile>
-    <ClCompile Include="settings.c">
+    <ClCompile Include="styleDialog.c">
       <Filter>Source Files</Filter>
     </ClCompile>
     <ClCompile Include="fft_calculate.c">
@@ -30,10 +30,13 @@
     <ClCompile Include="wasapi_audio.cpp">
       <Filter>Source Files</Filter>
     </ClCompile>
-    <ClCompile Include="DeviceSel.c">
+    <ClCompile Include="deviceDialog.c">
       <Filter>Source Files</Filter>
     </ClCompile>
     <ClCompile Include="drawBar2D.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
+    <ClCompile Include="settingsFile.c">
       <Filter>Source Files</Filter>
     </ClCompile>
   </ItemGroup>
@@ -44,10 +47,10 @@
     <ClInclude Include="variables.h">
       <Filter>Header Files</Filter>
     </ClInclude>
-    <ClInclude Include="serial.h">
+    <ClInclude Include="serialDialog.h">
       <Filter>Header Files</Filter>
     </ClInclude>
-    <ClInclude Include="settings.h">
+    <ClInclude Include="styleDialog.h">
       <Filter>Header Files</Filter>
     </ClInclude>
     <ClInclude Include="global.h">
@@ -56,10 +59,13 @@
     <ClInclude Include="fft_calculate.h">
       <Filter>Header Files</Filter>
     </ClInclude>
-    <ClInclude Include="DeviceSel.h">
+    <ClInclude Include="deviceDialog.h">
       <Filter>Header Files</Filter>
     </ClInclude>
     <ClInclude Include="wasapi_audio.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="settingsFile.h">
       <Filter>Header Files</Filter>
     </ClInclude>
   </ItemGroup>

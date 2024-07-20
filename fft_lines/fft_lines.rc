@@ -52,9 +52,9 @@ END
 
 // Icon with lowest ID value placed first to ensure application icon
 // remains consistent on all systems.
-IDI_ICON1               ICON                    "Audio_visualizer16.ico"
+ID_ICON_AUDIO_VISUALIZER16 ICON                    "Audio_visualizer16.ico"
 
-IDI_ICON2               ICON                    "Audio_visualizer32.ico"
+ID_ICON_AUDIO_VISUALIZER32 ICON                    "Audio_visualizer32.ico"
 
 
 /////////////////////////////////////////////////////////////////////////////
@@ -62,12 +62,13 @@ IDI_ICON2               ICON                    "Audio_visualizer32.ico"
 // Menu
 //
 
-IDR_MENU1 MENU
+IDR_MENU_FFT_LINES MENU
 BEGIN
     POPUP "Settings"
     BEGIN
-        MENUITEM "Settings",                    ID_SETTINGS_SETTINGS
+        MENUITEM "Style",                       ID_SETTINGS_STYLE
         MENUITEM "Devices",                     ID_SETTINGS_DEVICES
+        MENUITEM "Serial",                      ID_SETTINGS_SERIAL
     END
 END
 
@@ -77,7 +78,7 @@ END
 // Dialog
 //
 
-IDD_DIALOG1 DIALOGEX 0, 0, 401, 284
+STYLE_DIALOG DIALOGEX 0, 0, 401, 284
 STYLE DS_SETFONT | DS_MODALFRAME | DS_FIXEDSYS | WS_POPUP | WS_CAPTION | WS_SYSMENU
 CAPTION "Dialog"
 FONT 8, "MS Shell Dlg", 400, 0, 0x1
@@ -86,15 +87,24 @@ BEGIN
     PUSHBUTTON      "Cancel",IDCANCEL,344,263,50,14
 END
 
-IDD_DIALOG2 DIALOGEX 0, 0, 411, 228
+DEVICE_DIALOG DIALOGEX 0, 0, 411, 228
 STYLE DS_SETFONT | DS_MODALFRAME | DS_FIXEDSYS | WS_POPUP | WS_CAPTION | WS_SYSMENU
 CAPTION "Dialog"
 FONT 8, "MS Shell Dlg", 400, 0, 0x1
 BEGIN
     DEFPUSHBUTTON   "OK",IDOK,261,207,50,14
     PUSHBUTTON      "Cancel",IDCANCEL,354,207,50,14
-    LISTBOX         IDC_LIST1,24,14,248,96,LBS_NOINTEGRALHEIGHT | WS_VSCROLL | WS_TABSTOP
+    LISTBOX         IDC_LIST_DEVICES,24,14,248,96,LBS_NOINTEGRALHEIGHT | WS_VSCROLL | WS_TABSTOP
     PUSHBUTTON      "Change Device",IDC_BUTTON_CHANGE,58,161,58,14
+END
+
+SERIAL_DIALOG DIALOGEX 0, 0, 309, 176
+STYLE DS_SETFONT | DS_MODALFRAME | DS_FIXEDSYS | WS_POPUP | WS_CAPTION | WS_SYSMENU
+CAPTION "Dialog"
+FONT 8, "MS Shell Dlg", 400, 0, 0x1
+BEGIN
+    DEFPUSHBUTTON   "OK",IDOK,198,155,50,14
+    PUSHBUTTON      "Cancel",IDCANCEL,252,155,50,14
 END
 
 
@@ -106,22 +116,16 @@ END
 #ifdef APSTUDIO_INVOKED
 GUIDELINES DESIGNINFO
 BEGIN
-    IDD_DIALOG1, DIALOG
+    STYLE_DIALOG, DIALOG
     BEGIN
-        LEFTMARGIN, 7
-        RIGHTMARGIN, 394
-        VERTGUIDE, 270
-        TOPMARGIN, 7
-        BOTTOMMARGIN, 277
-        HORZGUIDE, 20
     END
 
-    IDD_DIALOG2, DIALOG
+    DEVICE_DIALOG, DIALOG
     BEGIN
-        LEFTMARGIN, 7
-        RIGHTMARGIN, 404
-        TOPMARGIN, 7
-        BOTTOMMARGIN, 221
+    END
+
+    SERIAL_DIALOG, DIALOG
+    BEGIN
     END
 END
 #endif    // APSTUDIO_INVOKED
@@ -132,12 +136,17 @@ END
 // AFX_DIALOG_LAYOUT
 //
 
-IDD_DIALOG1 AFX_DIALOG_LAYOUT
+STYLE_DIALOG AFX_DIALOG_LAYOUT
 BEGIN
     0
 END
 
-IDD_DIALOG2 AFX_DIALOG_LAYOUT
+DEVICE_DIALOG AFX_DIALOG_LAYOUT
+BEGIN
+    0
+END
+
+SERIAL_DIALOG AFX_DIALOG_LAYOUT
 BEGIN
     0
 END

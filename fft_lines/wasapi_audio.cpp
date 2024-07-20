@@ -75,7 +75,6 @@ Public functions
     Retrieve Audio Buffer:
         GetAudioBuffer
 -----------------------------------------------*/
-
 extern "C" HRESULT initializeRecording();
 extern "C" void    uninitializeRecording();
 extern "C" HRESULT startRecording();
@@ -97,7 +96,6 @@ Internal functions
     Data manipulation:
         MoveArray
 -----------------------------------------------*/
-
 HRESULT InitializeAudioStream();
 
 void MoveArray(int16_t * destination, int addCount, float* source);

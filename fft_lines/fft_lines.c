@@ -9,11 +9,14 @@
 #include <mfapi.h>
 
 #include "resource.h"
-#include "serial.h"
+
+#include "serialDialog.h"
 #include "global.h"
 #include "fft_calculate.h"
-#include "settings.h"
-#include "DeviceSel.h"
+
+#include "styleDialog.h"
+#include "settingsFile.h"
+#include "deviceDialog.h"
 
 #define FILE_ERROR_CODE 0x00000001
 
@@ -209,18 +212,18 @@ LRESULT CALLBACK WndProc(HWND hwnd, UINT msg, WPARAM wParam, LPARAM lParam)
 		switch (LOWORD(wParam))
 		{
 			//Creates settings dialog
-			case ID_SETTINGS_SETTINGS:
+			case ID_SETTINGS_STYLE:
 			{
-				DestroyWindow(SettingsDlg);
-				SettingsDlg = CreateDialog(GetModuleHandle(NULL), MAKEINTRESOURCE(IDD_DIALOG1), hwnd, SettingsDlgProc);
+				DestroyWindow(hwndStyleDialog);
+				hwndStyleDialog = CreateDialogW(GetModuleHandle(NULL), MAKEINTRESOURCE(STYLE_DIALOG), hwnd, StyleDialogProc);
 
-				if (SettingsDlg != NULL)
+				if (hwndStyleDialog != NULL)
 				{
-					ShowWindow(SettingsDlg, SW_SHOW);
+					ShowWindow(hwndStyleDialog, SW_SHOW);
 				}
 				else
 				{
-					MessageBox(hwnd, L"CreateDialog returned NULL SettingsDlg", L"Warning!",
+					MessageBox(hwnd, L"CreateDialog returned NULL while creating Style Dialog", L"Warning!",
 						MB_OK | MB_ICONINFORMATION);
 				}
 			}
@@ -228,16 +231,33 @@ LRESULT CALLBACK WndProc(HWND hwnd, UINT msg, WPARAM wParam, LPARAM lParam)
 			//Creates Device select dialog
 			case ID_SETTINGS_DEVICES:
 			{
-				DestroyWindow(DeviceSelDlg);
-				DeviceSelDlg = CreateDialog(GetModuleHandle(NULL), MAKEINTRESOURCE(IDD_DIALOG2), hwnd, DeviceSelProc);
+				DestroyWindow(hwndDeviceDialog);
+				hwndDeviceDialog = CreateDialogW(GetModuleHandle(NULL), MAKEINTRESOURCE(DEVICE_DIALOG), hwnd, DeviceDialogProc);
 
-				if (DeviceSelDlg != NULL)
+				if (hwndDeviceDialog != NULL)
 				{
-					ShowWindow(DeviceSelDlg, SW_SHOW);
+					ShowWindow(hwndDeviceDialog, SW_SHOW);
 				}
 				else
 				{
-					MessageBox(hwnd, L"CreateDialog returned NULL DeviceSelDlg", L"Warning!", 
+					MessageBox(hwnd, L"CreateDialog returned NULL while creating Device Dialog", L"Warning!", 
+						MB_OK | MB_ICONINFORMATION);
+				}
+			}
+			break;
+			//Creates serial dialog
+			case ID_SETTINGS_SERIAL:
+			{
+				DestroyWindow(hwndSerialDialog);
+				hwndSerialDialog = CreateDialogW(GetModuleHandle(NULL), MAKEINTRESOURCE(SERIAL_DIALOG), hwnd, SerialDialogProc);
+
+				if (hwndSerialDialog != NULL)
+				{
+					ShowWindow(hwndSerialDialog, SW_SHOW);
+				}
+				else
+				{
+					MessageBox(hwnd, L"CreateDialog returned NULL while creating Serial Dialog", L"Warning!",
 						MB_OK | MB_ICONINFORMATION);
 				}
 			}
@@ -267,9 +287,9 @@ LRESULT CALLBACK WndProc(HWND hwnd, UINT msg, WPARAM wParam, LPARAM lParam)
 	case WM_ERROR:
 	{
 		KillTimer(hwnd, ID_TIMER_UPDATE);
-
-		WCHAR* message[70];
-		wsprintfW(message, L"An Error has occured\nError Code: %x\nFile Code: %x", (int)wParam, (int)lParam);
+		DWORD error = GetLastError();
+		WCHAR* message[100];
+		wsprintfW(message, L"An Error has occured\nError Code: %x\nFile Code: %x\nLast Documented Error: %x", (int)wParam, (int)lParam, (int)error);
 		MessageBoxW(NULL, message, L"An Error has occured", MB_OK | MB_ICONERROR | MB_APPLMODAL);
 
 		DestroyWindow(hwnd);
@@ -286,6 +306,7 @@ LRESULT CALLBACK WndProc(HWND hwnd, UINT msg, WPARAM wParam, LPARAM lParam)
 
 		//write settings to a file
 		writeSettings();
+		uninitializeSettingsFile();
 
 		//stops recording
 		uninitializeRecording();
@@ -297,8 +318,8 @@ LRESULT CALLBACK WndProc(HWND hwnd, UINT msg, WPARAM wParam, LPARAM lParam)
 		KillTimer(hwnd, ID_TIMER_UPDATE);
 
 		//Destroy dialog if open
-		DestroyWindow(SettingsDlg);
-		DestroyWindow(DeviceSelDlg);
+		DestroyWindow(hwndStyleDialog);
+		DestroyWindow(hwndDeviceDialog);
 
 		//memory
 		if (bar)
@@ -329,13 +350,13 @@ int WINAPI WinMain(_In_ HINSTANCE hInstance, _In_opt_ HINSTANCE hPrevInstance, _
 	wc.cbClsExtra = 0;
 	wc.cbWndExtra = 0;
 	wc.hInstance = hInstance;
-	wc.hIcon = LoadIcon(hInstance, MAKEINTRESOURCE(IDI_ICON2));
+	wc.hIcon = LoadIcon(hInstance, MAKEINTRESOURCE(ID_ICON_AUDIO_VISUALIZER32));
 	wc.hCursor = LoadCursor(NULL, IDC_ARROW);
 	wc.hbrBackground = (HBRUSH)(COLOR_WINDOW + 1);
 	wc.lpszMenuName = NULL;
 	wc.lpszClassName = g_szClassName;
-	wc.hIconSm = LoadIcon(hInstance, MAKEINTRESOURCE(IDI_ICON1));
-	wc.lpszMenuName = MAKEINTRESOURCE(IDR_MENU1);
+	wc.hIconSm = LoadIcon(hInstance, MAKEINTRESOURCE(ID_ICON_AUDIO_VISUALIZER16));
+	wc.lpszMenuName = MAKEINTRESOURCE(IDR_MENU_FFT_LINES);
 
 	if (!RegisterClassEx(&wc))
 	{

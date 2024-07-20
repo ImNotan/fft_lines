@@ -149,21 +149,23 @@
     </PostBuildEvent>
   </ItemDefinitionGroup>
   <ItemGroup>
-    <ClCompile Include="DeviceSel.c" />
+    <ClCompile Include="deviceDialog.c" />
     <ClCompile Include="drawBar2D.cpp" />
     <ClCompile Include="fft_calculate.c" />
     <ClCompile Include="fft_lines.c" />
-    <ClCompile Include="serial.c" />
-    <ClCompile Include="settings.c" />
+    <ClCompile Include="serialDialog.c" />
+    <ClCompile Include="styleDialog.c" />
+    <ClCompile Include="settingsFile.c" />
     <ClCompile Include="wasapi_audio.cpp" />
   </ItemGroup>
   <ItemGroup>
-    <ClInclude Include="DeviceSel.h" />
+    <ClInclude Include="deviceDialog.h" />
     <ClInclude Include="fft_calculate.h" />
     <ClInclude Include="global.h" />
     <ClInclude Include="resource.h" />
-    <ClInclude Include="serial.h" />
-    <ClInclude Include="settings.h" />
+    <ClInclude Include="serialDialog.h" />
+    <ClInclude Include="styleDialog.h" />
+    <ClInclude Include="settingsFile.h" />
     <ClInclude Include="variables.h" />
     <ClInclude Include="wasapi_audio.h" />
   </ItemGroup>

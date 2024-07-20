@@ -1,7 +1,7 @@
 #include <Windows.h>
 #include <stdbool.h>
 
-#include "DeviceSel.h"
+#include "deviceDialog.h"
 #include "resource.h"
 #include "global.h"
 
@@ -37,10 +37,10 @@ HRESULT stopRecording();
 HRESULT ChangeAudioStream(unsigned int deviceNumber);
 
 /*-----------------------------------------------
-	Global Handle for Device Selection Dialog
+	Public Handle for Device Selection Dialog
 	created in fft_lines - WndProc - WM_COMMAND - ID_SETTING_DEVICES
 -----------------------------------------------*/
-HWND DeviceSelDlg = NULL;
+HWND hwndDeviceDialog = NULL;
 
 
 
@@ -54,7 +54,7 @@ HWND DeviceSelDlg = NULL;
 			IDCANCEL
 			IDC_BUTTON_CHANGE
 -----------------------------------------------*/
-LRESULT CALLBACK DeviceSelProc(HWND hwnd, UINT Message, WPARAM wParam, LPARAM lParam)
+LRESULT CALLBACK DeviceDialogProc(HWND hwnd, UINT Message, WPARAM wParam, LPARAM lParam)
 {
 	switch (Message)
 	{
@@ -79,7 +79,7 @@ LRESULT CALLBACK DeviceSelProc(HWND hwnd, UINT Message, WPARAM wParam, LPARAM lP
 					hr = getAudioDeviceNames(i, &deviceName);
 					CHECK_ERROR(hr);
 
-					SendMessageW(GetDlgItem(hwnd, IDC_LIST1), LB_ADDSTRING, 0, deviceName);
+					SendMessageW(GetDlgItem(hwnd, IDC_LIST_DEVICES), LB_ADDSTRING, 0, deviceName);
 				}
 			}
 		}
@@ -88,7 +88,7 @@ LRESULT CALLBACK DeviceSelProc(HWND hwnd, UINT Message, WPARAM wParam, LPARAM lP
 		/*-----------------------------------------------
 			WM_COMMAND
 
-			Handles messages from command items
+			Handles messages from control items
 
 			IDOK
 			IDCANCEL
@@ -99,16 +99,14 @@ LRESULT CALLBACK DeviceSelProc(HWND hwnd, UINT Message, WPARAM wParam, LPARAM lP
 			switch (LOWORD(wParam))
 			{
 				/*-----------------------------------------------
-					IDOK IDCANCEL
+					IDOK 
+					IDCANCEL
 
 					close the window no difference right now
 				-----------------------------------------------*/
 				case IDOK:
-					DestroyWindow(DeviceSelDlg);
-					break;
-
 				case IDCANCEL:
-					DestroyWindow(DeviceSelDlg);
+					DestroyWindow(hwndDeviceDialog);
 					break;
 
 				/*-----------------------------------------------
@@ -125,7 +123,7 @@ LRESULT CALLBACK DeviceSelProc(HWND hwnd, UINT Message, WPARAM wParam, LPARAM lP
 					hr = stopRecording();
 					CHECK_ERROR(hr);
 
-					unsigned int deviceSelected = SendMessageW(GetDlgItem(hwnd, IDC_LIST1), LB_GETCURSEL, 0, 0);
+					unsigned int deviceSelected = SendMessageW(GetDlgItem(hwnd, IDC_LIST_DEVICES), LB_GETCURSEL, 0, 0);
 					hr = ChangeAudioStream(deviceSelected);
 					CHECK_ERROR(hr);
 					hr = startRecording();

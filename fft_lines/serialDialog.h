@@ -1,7 +1,11 @@
 #include <Windows.h>
 #include <stdbool.h>
 
+extern LRESULT CALLBACK SerialDialogProc(HWND hwnd, UINT Message, WPARAM wParam, LPARAM lParam);
+
 extern bool doSerial;
+
+extern HWND hwndSerialDialog;
 
 extern int InitializeSerial(HWND hwnd);
 
