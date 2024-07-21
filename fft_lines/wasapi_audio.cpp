@@ -85,7 +85,7 @@ extern "C" HRESULT getAudioDeviceNames(unsigned int deviceNumber, wchar_t* devic
 extern "C" HRESULT ChangeAudioStream(unsigned int deviceNumber);
 void                getWaveFormat(WAVEFORMATEX * waveformat);
 
-extern "C" HRESULT GetAudioBuffer(int16_t * buffer);
+extern "C" HRESULT GetAudioBuffer(INT16* audioBufferLeft, INT16* audioBufferRight, int stereo);
 
 /*-----------------------------------------------
 Internal functions
@@ -405,7 +405,7 @@ void MoveArray(int16_t* destination, int addCount, float* source)
     Called in:
     fft_lines - WndProc - WM_TIMER
 -----------------------------------------------*/
-HRESULT GetAudioBuffer(int16_t* buffer)
+HRESULT GetAudioBuffer(INT16 * audioBufferLeft, INT16 * audioBufferRight, int stereo)
 {
     HRESULT hr = S_OK;
 
@@ -440,21 +440,35 @@ HRESULT GetAudioBuffer(int16_t* buffer)
         {
             int i = 0;
             LONG lBytesToWrite = numFramesAvailable * pwfx->nBlockAlign;
-            float* f = (float*)malloc(N * sizeof(float));
-            CHECK_NULL(f);
+            float* left = (float*)malloc(numFramesAvailable * sizeof(float));
+            float* right = (float*)malloc(numFramesAvailable * sizeof(float));
+            CHECK_NULL(left);
+            CHECK_NULL(right);
             //GetBuffer fills pData an Byte array with data
             //4 Bytes of pData create an float
             //pData is alternating between left and right channel
             //so to get the float of one data point every 8th pData is iterated and 4 Bytes are coppied to an float array
             //the other 4 Bytes are discarded because we only want one channel
+            //for (int j = 0; j < lBytesToWrite; j += (pwfx->wBitsPerSample / 4))
+            //{
+            //    memcpy(&f[i], &pData[j], sizeof(f[i]));
+            //    i++;
+            //}
+            //After that the new data is appended to the previous data which is moved forward to make space for the new data at the end
             for (int j = 0; j < lBytesToWrite; j += (pwfx->wBitsPerSample / 4))
             {
-                memcpy(&f[i], &pData[j], sizeof(f[i]));
+                memcpy(&left[i], &pData[j], sizeof(left[i]));
+                if (stereo)
+                {
+                    memcpy(&right[i], &pData[j + 4], sizeof(right[i]));
+                }
                 i++;
             }
-            //After that the new data is appended to the previous data which is moved forward to make space for the new data at the end
-            MoveArray(buffer, i, f);
-            free(f);
+            MoveArray(audioBufferLeft, i, left);
+            if(stereo)
+                MoveArray(audioBufferRight, i, right);
+            free(left);
+            free(right);
         }
 
         hr = pCaptureClient->ReleaseBuffer(numFramesAvailable);

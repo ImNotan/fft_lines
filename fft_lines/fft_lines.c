@@ -31,7 +31,7 @@
 //Define wasapi_audio.cpp functions for audio recording with WASAPI
 HRESULT initializeRecording();
 void uninitializeRecording();
-HRESULT GetAudioBuffer(int16_t* buffer);
+HRESULT GetAudioBuffer(INT16 * audioBufferLeft, INT16 * audioBufferRight, int stereo);
 
 //Define drawBar2D.cpp functions for drawing on screen with Direct2D
 void DiscardGraphicsResources();
@@ -47,9 +47,6 @@ HWND globalhwnd;
 //Defines a Timer ID
 #define ID_TIMER_UPDATE 1
 #define ID_TIMER_UPDATE2 2
-
-//Audio Buffer
-int16_t* largeBuffer;
 
 //average frame rate calculation variables
 #define MAXSAMPLES 100
@@ -104,11 +101,8 @@ LRESULT CALLBACK WndProc(HWND hwnd, UINT msg, WPARAM wParam, LPARAM lParam)
 		//Looks for settings file and applies them
 		hr = initializeSettingsFile(hwnd);
 		CHECK_ERROR(hr);
-		readSettings();
-
-		//the bar array saves data about every bar
-		largeBuffer = (int16_t*)malloc(N * sizeof(int16_t));
-		CHECK_NULL(largeBuffer);
+		hr = readSettings();
+		CHECK_ERROR(hr);
 
 		//Starts Recording Audio
 		hr = initializeRecording();
@@ -127,13 +121,21 @@ LRESULT CALLBACK WndProc(HWND hwnd, UINT msg, WPARAM wParam, LPARAM lParam)
 	{
 		HRESULT hr = S_OK;
 
-		CHECK_NULL(bar);
-		CHECK_NULL(largeBuffer);
+		CHECK_NULL(barLeft);
+		CHECK_NULL(audioBufferLeft);
+		if (stereo)
+		{
+			CHECK_NULL(audioBufferRight);
+			CHECK_NULL(barRight);
+		}
 
 		if (waveform)
+		{
 			CHECK_NULL(waveBar);
+		}
+			
 
-		hr = GetAudioBuffer(largeBuffer);
+		hr = GetAudioBuffer(audioBufferLeft, audioBufferRight, stereo);
 		CHECK_ERROR(hr);
 
 		//Calculates fourier transfor of audio data
@@ -148,7 +150,7 @@ LRESULT CALLBACK WndProc(HWND hwnd, UINT msg, WPARAM wParam, LPARAM lParam)
 
 		for (int i = 0; i < N; i++)
 		{
-			input[i][REAL] = (float)largeBuffer[i];
+			input[i][REAL] = (float)audioBufferLeft[i];
 			input[i][IMAG] = 0;
 		}
 
@@ -158,11 +160,34 @@ LRESULT CALLBACK WndProc(HWND hwnd, UINT msg, WPARAM wParam, LPARAM lParam)
 		for (int i = 0; i < barCount; i++)
 		{
 			//Calculates distance to origin with Pythagoras in complex plane
-			bar[i].height = (int)(sqrt(pow(output[i][REAL], 2) + pow(output[i][IMAG], 2)) * zoom);
+			barLeft[i].height = (int)(sqrt(pow(output[i][REAL], 2) + pow(output[i][IMAG], 2)) * zoom);
 
 			if (circle)
 			{
-				bar[i].height += 10;
+				barLeft[i].height += 10;
+			}
+		}
+
+		if (stereo)
+		{
+			for (int i = 0; i < N; i++)
+			{
+				input[i][REAL] = (float)audioBufferRight[i];
+				input[i][IMAG] = 0;
+			}
+
+			fft(input, output);
+
+			//Sets the height of the bars calculated by fourier transfor
+			for (int i = 0; i < barCount; i++)
+			{
+				//Calculates distance to origin with Pythagoras in complex plane
+				barRight[i].height = (int)(sqrt(pow(output[i][REAL], 2) + pow(output[i][IMAG], 2)) * zoom);
+
+				if (circle)
+				{
+					barRight[i].height += 10;
+				}
 			}
 		}
 
@@ -177,15 +202,15 @@ LRESULT CALLBACK WndProc(HWND hwnd, UINT msg, WPARAM wParam, LPARAM lParam)
 			GetClientRect(hwnd, &windowRect);
 			for (int i = 0; i < N; i++)
 			{
-				waveBar[i].height = largeBuffer[i] * 0.01f + (windowRect.bottom - bottomBarHeihgt) / 2 + 50;
+				waveBar[i].height = audioBufferLeft[i] * 0.01f + (windowRect.bottom - bottomBarHeihgt) / 2 + 50;
 			}
 		}
 
 		//Prints to serial
-		if (bar[led_bar].height >= 0 && doSerial)
+		if (barLeft[led_bar].height >= 0 && doSerial)
 		{
 			char line[1];
-			line[0] = (char)((float)bar[led_bar].height * 0.1f);
+			line[0] = (char)((float)barLeft[led_bar].height * 0.1f);
 			WriteSerial(line, globalhwnd);
 		}
 
@@ -266,9 +291,16 @@ LRESULT CALLBACK WndProc(HWND hwnd, UINT msg, WPARAM wParam, LPARAM lParam)
 	{
 		HRESULT hr = S_OK;
 
-		ResizeBars(hwnd, bar, barCount);
+		if (dofft)
+		{
+			ResizeBars(hwnd, barLeft, barCount, 0, stereo);
+			if (stereo)
+			{
+				ResizeBars(hwnd, barRight, barCount, 1, stereo);
+			}
+		}
 		if (waveform)
-			ResizeBars(hwnd, waveBar, N);
+			ResizeBars(hwnd, waveBar, N, 0, 0);
 
 		hr = Resize(hwnd);
 		CHECK_ERROR(hr);
@@ -320,12 +352,7 @@ LRESULT CALLBACK WndProc(HWND hwnd, UINT msg, WPARAM wParam, LPARAM lParam)
 		DestroyWindow(hwndDeviceDialog);
 
 		//memory
-		if (bar)
-			free(bar);
-		if (largeBuffer)
-			free(largeBuffer);
-		if (waveBar)
-			free(waveBar);
+		UninitializeMemory();
 
 		PostQuitMessage(0);
 	}

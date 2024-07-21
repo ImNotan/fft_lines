@@ -14,6 +14,7 @@
 #define DEFAULT_IGNORESERIAL 1
 #define DEFAULT_CIRCLE 0
 #define DEFAULT_WAVEFORM 0
+#define DEFAULT_STEREO 0
 
 #define DEFAULT_BOTTOMBARHEIGHT 30
 #define DEFAULT_LEDBAR 4
@@ -28,15 +29,20 @@ typedef struct _BARINFO
 extern HRESULT initializeSettingsFile(HWND hwnd);
 extern void uninitializeSettingsFile();
 
-extern void readSettings();
+extern HRESULT readSettings();
 extern void writeSettings();
+extern void UninitializeMemory();
 
-extern void ResizeBars(HWND hwnd, BARINFO* bars, int size);
+extern void ResizeBars(HWND hwnd, BARINFO* bars, int size, int channel, int dostereo);
 
-extern BARINFO* bar;
+extern BARINFO* barLeft;
+extern BARINFO* barRight;
 extern BARINFO* waveBar;
 
 extern double* pGradients;
+
+extern INT16* audioBufferLeft;
+extern INT16* audioBufferRight;
 
 extern float zoom;
 extern LRESULT colorSel;
@@ -49,6 +55,7 @@ extern bool gradient;
 extern bool ignoreSerial;
 extern bool circle;
 extern bool waveform;
+extern bool stereo;
 
 extern bool redrawAll;
 

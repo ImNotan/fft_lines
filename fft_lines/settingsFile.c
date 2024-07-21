@@ -42,6 +42,10 @@ defined in settings.h
 		other:
 			pGradients (points to color gradient used in drawBar2D - CreateBarBrush
 
+		Audio buffer:
+			audioBufferLeft
+			audioBufferRight
+
 	Variables (settings):
 		zoom
 		barCount
@@ -60,10 +64,14 @@ defined in settings.h
 		bottomBarheight
 		led_bar
 -----------------------------------------------*/
-BARINFO* bar = NULL;
+BARINFO* barLeft = NULL;
+BARINFO* barRight = NULL;
 BARINFO* waveBar = NULL;
 
 double* pGradients = &plasma;
+
+INT16* audioBufferLeft = NULL;
+INT16* audioBufferRight = NULL;
 
 float zoom = DEFAULT_ZOOM;
 int barCount = DEFAULT_BARCOUNT;
@@ -74,6 +82,7 @@ bool gradient = DEFAULT_GRADIENT;
 bool ignoreSerial = DEFAULT_IGNORESERIAL;
 bool circle = DEFAULT_CIRCLE;
 bool waveform = DEFAULT_WAVEFORM;
+bool stereo = DEFAULT_STEREO;
 
 bool redrawAll = false;
 
@@ -86,6 +95,7 @@ Public functions
 	Initialization:
 		initializeSettingsFile
 		uninitializeSettingsFile
+		uninitializeMemory
 
 	I/O SettingsFile:
 		readSettings
@@ -97,7 +107,7 @@ Public functions
 HRESULT initializeSettingsFile(HWND hwnd);
 void uninitializeSettingsFile();
 
-void readSettings();
+HRESULT readSettings();
 void writeSettings();
 
 void ResizeBars(HWND hwnd, BARINFO* bars, int size);
@@ -107,9 +117,13 @@ Internal functions
 
 	manipulation of variables:
 		setColor
+
+	Initialization:
+		InitializeMemory
 -----------------------------------------------*/
 void setColor();
 
+HRESULT InitializeMemory();
 
 /*-----------------------------------------------
 	Initialization of the settings file
@@ -153,7 +167,7 @@ void uninitializeSettingsFile()
 	fft_lines - WndProc - WM_CREATE
 	styleDialog - StyleDialogProc - WM_COMMANd - IDCANCEL
 -----------------------------------------------*/
-void readSettings()
+HRESULT readSettings()
 {
 	LARGE_INTEGER PfileSize;
 	GetFileSizeEx(hSettingsFile, &PfileSize);
@@ -181,13 +195,6 @@ void readSettings()
 	barCount = strtol(buffer, &pNextNumber, 10);
 	if (barCount < MIN_BARCOUNT || barCount > MAX_BARCOUNT)
 		barCount = DEFAULT_BARCOUNT;
-
-	free(bar);
-	BARINFO* tmp = (BARINFO*)realloc(bar, barCount * sizeof(BARINFO));
-	CHECK_NULL(tmp);
-	bar = tmp;
-	ResizeBars(globalhwnd, bar, barCount);
-	redrawAll = true;
 
 	zoom = (float)strtof(pNextNumber, &pNextNumber);
 	if (zoom < MIN_ZOOM || zoom > MAX_ZOOM)
@@ -218,20 +225,89 @@ void readSettings()
 	if (circle < 0 || circle > 1)
 		circle = DEFAULT_CIRCLE;
 
-	waveform = strtol(pNextNumber, NULL, 10);
+	waveform = strtol(pNextNumber, &pNextNumber, 10);
 	if (waveform < 0 || waveform > 1)
 		waveform = DEFAULT_WAVEFORM;
 
+	stereo = strtol(pNextNumber, &pNextNumber, 10);
+	if (stereo < 0 || stereo > 1)
+		stereo = DEFAULT_STEREO;
+
+	InitializeMemory();
+	free(buffer);
+}
+
+/*-----------------------------------------------
+	Initialization of Global Arrays
+
+	Allocates memory for Global Arrays
+	Called in:
+	settingsFile - readSettings
+-----------------------------------------------*/
+HRESULT InitializeMemory()
+{
+	INT16* tmp = (INT16*)realloc(audioBufferLeft, N * sizeof(INT16));
+	CHECK_NULL(tmp);
+	audioBufferLeft = tmp;
+
+	if (stereo)
+	{
+		INT16* tmp = (INT16*)realloc(audioBufferRight, N * sizeof(INT16));
+		CHECK_NULL(tmp);
+		audioBufferRight = tmp;
+	}
+
+	if (dofft)
+	{
+		BARINFO* tmp = (BARINFO*)realloc(barLeft, barCount * sizeof(BARINFO));
+		CHECK_NULL(tmp);
+		barLeft = tmp;
+		ResizeBars(globalhwnd, barLeft, barCount, 0, stereo);
+
+		if (stereo)
+		{
+			BARINFO* tmp = (BARINFO*)realloc(barRight, barCount * sizeof(BARINFO));
+			CHECK_NULL(tmp);
+			barRight = tmp;
+			ResizeBars(globalhwnd, barRight, barCount, 1, stereo);
+		}
+	}
+
 	if (waveform)
 	{
-		free(waveBar);
 		BARINFO* tmp = (BARINFO*)realloc(waveBar, N * sizeof(BARINFO));
 		CHECK_NULL(tmp);
 		waveBar = tmp;
-		ResizeBars(globalhwnd, waveBar, N);
+		ResizeBars(globalhwnd, waveBar, N, 0, 0);
 	}
 
-	free(buffer);
+	redrawAll = true;
+
+	return S_OK;
+}
+
+/*-----------------------------------------------
+	Unitialization of Global Arrays
+
+	Called in:
+	fft_lines - WndProc - WM_DESTROY
+-------------------------------------------------*/
+void UninitializeMemory()
+{
+	if (audioBufferLeft)
+		free(audioBufferLeft);
+
+	if (audioBufferRight)
+		free(audioBufferRight);
+
+	if (barLeft)
+		free(barLeft);
+
+	if (barRight)
+		free(barRight);
+
+	if (waveBar)
+		free(waveBar);
 }
 
 /*-----------------------------------------------
@@ -249,7 +325,7 @@ void writeSettings()
 	SetFilePointerEx(hSettingsFile, move, NULL, FILE_BEGIN);
 
 	char str[1000];
-	sprintf_s(str, 1000, "%d %0.6f %I64d %d %d %d %d %d %d\0", barCount, zoom, colorSel, dofft, background, gradient, ignoreSerial, circle, waveform);
+	sprintf_s(str, 1000, "%d %0.6f %I64d %d %d %d %d %d %d %d\0", barCount, zoom, colorSel, dofft, background, gradient, ignoreSerial, circle, waveform, stereo);
 	WriteFile(hSettingsFile, str, 1000, NULL, NULL);
 }
 
@@ -291,55 +367,111 @@ void setColor()
 	Called in:
 	fft_lines - WndProc - WM_SIZE
 -----------------------------------------------*/
-void ResizeBars(HWND hwnd, BARINFO* bars, int size)
+void ResizeBars(HWND hwnd, BARINFO* bars, int size, int channel, int doStereo)
 {
 	RECT windowRect;
 	GetClientRect(hwnd, &windowRect);
 
-	if (size > 0 && windowRect.right > 1)
+	if (doStereo)
+	{
+		windowRect.left = (windowRect.right / 2) * channel;
+		windowRect.right = windowRect.right - (windowRect.right / 2) * !channel;
+	}
+
+	int horizontalSize = windowRect.right - windowRect.left;
+
+	if (size > 0 && horizontalSize > 1)
 	{
 		//For every bar set width
-		for (int i = 0; i < size; i++)
+		if (channel == 0)
 		{
-			bars[i].width = (unsigned int)((windowRect.right / size) + 1);
-			bars[i].x = i * (bars[i].width - 1);
-		}
-
-		//Calculates how many bar have to be larger
-
-		//Can't divide by 0
-		if (windowRect.right % size == 0)
-			return;
-
-		int shift = 0;
-		float i;
-		//iterates over number of bars divided by how many bars need to be bigger
-		for (i = 0; i < size; i += (float)size / (float)(windowRect.right % size))
-		{
-			//End loop if enough bars have been moved edge case
-			if (shift > windowRect.right % size)
+			for (int i = 0; i < size; i++)
 			{
-				break;
+				bars[i].width = (unsigned int)((horizontalSize / size) + 1);
+				bars[i].x = windowRect.left + i * (bars[i].width - 1);
 			}
-			//Increases width and shift
-			bars[(int)i].width += 1;
-			bars[(int)i].x += shift;
 
-			//iterates over bars between two larger bars and shifts them
-			for (int j = (int)(i - (float)size / (float)(windowRect.right % size)) + 1; j < (int)i; j++)
+			//Calculates how many bar have to be larger
+
+			//Can't divide by 0
+			if (horizontalSize % size == 0)
+				return;
+
+			int shift = 0;
+			float i;
+			//iterates over number of bars divided by how many bars need to be bigger
+			for (i = 0; i < size; i += (float)size / (float)(horizontalSize % size))
+			{
+				//End loop if enough bars have been moved edge case
+				if (shift > horizontalSize % size)
+				{
+					break;
+				}
+				//Increases width and shift
+				bars[(int)i].width += 1;
+				bars[(int)i].x += shift;
+
+				//iterates over bars between two larger bars and shifts them
+				for (int j = (int)(i - (float)size / (float)(horizontalSize % size)) + 1; j < (int)i; j++)
+				{
+					bars[j].x += shift;
+				}
+
+				shift++;
+			}
+
+			//shifts over the last bars which haven't been shifted yet
+			i -= (float)size / (float)(horizontalSize % size);
+
+			for (int j = (int)i + 1; j < size; j++)
 			{
 				bars[j].x += shift;
 			}
-
-			shift++;
 		}
-
-		//shifts over the last bars which haven't been shifted yet
-		i -= (float)size / (float)(windowRect.right % size);
-
-		for (int j = (int)i + 1; j < size; j++)
+		else if (channel == 1)
 		{
-			bars[j].x += shift;
+			for (int i = 0; i < size; i++)
+			{
+				bars[i].width = (unsigned int)((horizontalSize / size) + 1);
+				bars[i].x = windowRect.right - i * (bars[i].width - 1);
+			}
+
+			//Calculates how many bar have to be larger
+
+			//Can't divide by 0
+			if (horizontalSize % size == 0)
+				return;
+
+			int shift = 0;
+			float i;
+			//iterates over number of bars divided by how many bars need to be bigger
+			for (i = 0; i < size; i += (float)size / (float)(horizontalSize % size))
+			{
+				//End loop if enough bars have been moved edge case
+				if (shift > horizontalSize % size)
+				{
+					break;
+				}
+				//Increases width and shift
+				bars[(int)i].width += 1;
+				bars[(int)i].x -= shift;
+
+				//iterates over bars between two larger bars and shifts them
+				for (int j = (int)(i - (float)size / (float)(horizontalSize % size)) + 1; j < (int)i; j++)
+				{
+					bars[j].x -= shift;
+				}
+
+				shift++;
+			}
+
+			//shifts over the last bars which haven't been shifted yet
+			i -= (float)size / (float)(horizontalSize % size);
+
+			for (int j = (int)i + 1; j < size; j++)
+			{
+				bars[j].x -= shift;
+			}
 		}
 	}
 }

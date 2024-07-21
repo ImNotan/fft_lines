@@ -40,6 +40,7 @@ Define Control IDs
 #define IDC_BUTTON_GRADIENT				(HMENU)1012
 #define IDC_BUTTON_CIRCLE				(HMENU)1015
 #define IDC_BUTTON_WAVEFORM				(HMENU)1016
+#define IDC_BUTTON_STEREO				(HMENU)1017
 
 #define IDC_COMBO_COLORS				(HMENU)1020
 
@@ -126,6 +127,13 @@ HRESULT CreateControls(HWND hwnd)
 	if (waveform)
 		SendMessageW(ButtonWaveform, BM_SETCHECK, BST_CHECKED, 0);
 
+	HWND ButtonStereo = CreateWindowW(L"Button", L"Stereo",
+		WS_CHILD | WS_VISIBLE | BS_AUTOCHECKBOX, 50, 240, 150, 15, hwnd, IDC_BUTTON_STEREO, NULL, NULL);
+	CHECK_NULL(ButtonStereo);
+
+	if (stereo)
+		SendMessageW(ButtonStereo, BM_SETCHECK, BST_CHECKED, 0);
+
 
 	WCHAR strBarCount[5];
 	wsprintfW(strBarCount, L"%d", barCount);
@@ -206,6 +214,7 @@ HRESULT CreateControls(HWND hwnd)
 			IDC_BUTTON_GRADIENT
 			IDC_BUTTON_CIRCLE
 			IDC_BUTTON_WAVEFORM
+			IDC_BUTTON_STEREO
 			IDC_EDIT_BARCOUNT
 				EN_CHANGE
 			IDC_COMBO_COLORS
@@ -256,7 +265,9 @@ LRESULT CALLBACK StyleDialogProc(HWND hwnd, UINT Message, WPARAM wParam, LPARAM 
 				-----------------------------------------------*/
 				case IDCANCEL:
 				{
-					readSettings();
+					HRESULT hr = S_OK;
+					hr = readSettings();
+					CHECK_ERROR(hr);
 					DestroyWindow(hwndStyleDialog);
 				}
 				break;
@@ -267,6 +278,7 @@ LRESULT CALLBACK StyleDialogProc(HWND hwnd, UINT Message, WPARAM wParam, LPARAM 
 					IDC_BUTTON_GRADIENT
 					IDC_BUTTON_CIRCLE
 					IDC_BUTTON_WAVEFORM
+					IDC_BUTTON_STEREO
 
 					change variable determening the drawing style
 				-----------------------------------------------*/
@@ -289,14 +301,38 @@ LRESULT CALLBACK StyleDialogProc(HWND hwnd, UINT Message, WPARAM wParam, LPARAM 
 					{
 						BARINFO* tmp = (BARINFO*)realloc(waveBar, N * sizeof(BARINFO));
 						CHECK_NULL(tmp);
-
 						waveBar = tmp;
-						ResizeBars(globalhwnd, waveBar, N);
+						ResizeBars(globalhwnd, waveBar, N, 0, 0);
 					}
 					else
 					{
 						free(waveBar);
 						waveBar = NULL;
+					}
+				}
+				break;
+				case IDC_BUTTON_STEREO:
+				{
+					stereo = !stereo;
+					if (stereo)
+					{
+						ResizeBars(globalhwnd, barLeft, barCount, 0, stereo);
+						INT16* tmpint16 = (INT16*)realloc(audioBufferRight, N * sizeof(INT16));
+						CHECK_NULL(tmpint16);
+						audioBufferRight = tmpint16;
+
+						BARINFO* tmpbarinfo = (BARINFO*)realloc(barRight, barCount * sizeof(BARINFO));
+						CHECK_NULL(tmpbarinfo);
+						barRight = tmpbarinfo;
+						ResizeBars(globalhwnd, barRight, barCount, 1, stereo);
+					}
+					else
+					{
+						ResizeBars(globalhwnd, barLeft, barCount, 0, stereo);
+						free(audioBufferRight);
+						free(barRight);
+						audioBufferRight = NULL;
+						barRight = NULL;
 					}
 				}
 				break;
@@ -348,13 +384,21 @@ LRESULT CALLBACK StyleDialogProc(HWND hwnd, UINT Message, WPARAM wParam, LPARAM 
 								break;
 
 							SendMessageW(hBarcountSlider, TBM_SETPOS, TRUE, editBarCount);
+
 							barCount = editBarCount;
-							BARINFO* tmp = (BARINFO*)realloc(bar, barCount * sizeof(BARINFO));
 
+							BARINFO* tmp = (BARINFO*)realloc(barLeft, barCount * sizeof(BARINFO));
 							CHECK_NULL(tmp);
+							barLeft = tmp;
+							ResizeBars(globalhwnd, barLeft, barCount, 0, stereo);
 
-							bar = tmp;
-							ResizeBars(globalhwnd, bar, barCount);
+							if (stereo)
+							{
+								BARINFO* tmp = (BARINFO*)realloc(barRight, barCount * sizeof(BARINFO));
+								CHECK_NULL(tmp);
+								barRight = tmp;
+								ResizeBars(globalhwnd, barRight, barCount, 1, stereo);
+							}
 							redrawAll = true;
 						}
 						break;
@@ -401,18 +445,21 @@ LRESULT CALLBACK StyleDialogProc(HWND hwnd, UINT Message, WPARAM wParam, LPARAM 
 		{
 			LRESULT posBarcount = SendMessageW(hBarcountSlider, TBM_GETPOS, 0, 0);
 			barCount = posBarcount;
-			BARINFO* tmp = (BARINFO*)realloc(bar, barCount * sizeof(BARINFO));
-			if (tmp)
+
+			BARINFO* tmp = (BARINFO*)realloc(barLeft, barCount * sizeof(BARINFO));
+			CHECK_NULL(tmp);
+			barLeft = tmp;
+			ResizeBars(globalhwnd, barLeft, barCount, 0, stereo);
+
+			if (stereo)
 			{
-				bar = tmp;
-				ResizeBars(globalhwnd, bar, barCount);
-				redrawAll = true;
+				BARINFO* tmp = (BARINFO*)realloc(barRight, barCount * sizeof(BARINFO));
+				CHECK_NULL(tmp);
+				barRight = tmp;
+				ResizeBars(globalhwnd, barRight, barCount, 1, stereo);
 			}
-			else
-			{
-				MessageBoxA(hwnd, "Failed to allocate memory for bar", "Warning", MB_OK);
-				SendMessageW(globalhwnd, WM_DESTROY, 0, 0);
-			}
+			redrawAll = true;
+
 			WCHAR strBarCount[5];
 			wsprintfW(strBarCount, L"%d", barCount);
 			SetDlgItemTextW(hwnd, IDC_EDIT_BARCOUNT, strBarCount);
