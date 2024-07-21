@@ -103,6 +103,8 @@ LRESULT CALLBACK WndProc(HWND hwnd, UINT msg, WPARAM wParam, LPARAM lParam)
 		CHECK_ERROR(hr);
 		hr = readSettings();
 		CHECK_ERROR(hr);
+		hr = InitializeMemory();
+		CHECK_ERROR(hr);
 
 		//Starts Recording Audio
 		hr = initializeRecording();
@@ -121,12 +123,15 @@ LRESULT CALLBACK WndProc(HWND hwnd, UINT msg, WPARAM wParam, LPARAM lParam)
 	{
 		HRESULT hr = S_OK;
 
-		CHECK_NULL(barLeft);
-		CHECK_NULL(audioBufferLeft);
-		if (stereo)
+		if (dofft)
 		{
-			CHECK_NULL(audioBufferRight);
-			CHECK_NULL(barRight);
+			CHECK_NULL(barLeft);
+			CHECK_NULL(audioBufferLeft);
+			if (stereo)
+			{
+				CHECK_NULL(audioBufferRight);
+				CHECK_NULL(barRight);
+			}
 		}
 
 		if (waveform)

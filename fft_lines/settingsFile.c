@@ -95,6 +95,7 @@ Public functions
 	Initialization:
 		initializeSettingsFile
 		uninitializeSettingsFile
+		InitializeMemory
 		uninitializeMemory
 
 	I/O SettingsFile:
@@ -107,6 +108,9 @@ Public functions
 HRESULT initializeSettingsFile(HWND hwnd);
 void uninitializeSettingsFile();
 
+void UninitializeMemory();
+HRESULT InitializeMemory();
+
 HRESULT readSettings();
 void writeSettings();
 
@@ -117,13 +121,8 @@ Internal functions
 
 	manipulation of variables:
 		setColor
-
-	Initialization:
-		InitializeMemory
 -----------------------------------------------*/
 void setColor();
-
-HRESULT InitializeMemory();
 
 /*-----------------------------------------------
 	Initialization of the settings file
@@ -173,8 +172,10 @@ HRESULT readSettings()
 	GetFileSizeEx(hSettingsFile, &PfileSize);
 	INT64 fileSize = PfileSize.QuadPart;
 
-	if (fileSize > 1000)
-		return 0;
+	if (fileSize > 1000 || fileSize == 0)
+	{
+		return S_OK;
+	}
 
 	DWORD bytes_read = 0;
 	LARGE_INTEGER move;
@@ -233,7 +234,6 @@ HRESULT readSettings()
 	if (stereo < 0 || stereo > 1)
 		stereo = DEFAULT_STEREO;
 
-	InitializeMemory();
 	free(buffer);
 }
 

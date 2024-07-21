@@ -17,7 +17,7 @@
 #define DEFAULT_STEREO 0
 
 #define DEFAULT_BOTTOMBARHEIGHT 30
-#define DEFAULT_LEDBAR 4
+#define DEFAULT_LEDBAR 3
 
 typedef struct _BARINFO
 {
@@ -29,9 +29,12 @@ typedef struct _BARINFO
 extern HRESULT initializeSettingsFile(HWND hwnd);
 extern void uninitializeSettingsFile();
 
+extern void UninitializeMemory();
+extern HRESULT InitializeMemory();
+
 extern HRESULT readSettings();
 extern void writeSettings();
-extern void UninitializeMemory();
+
 
 extern void ResizeBars(HWND hwnd, BARINFO* bars, int size, int channel, int dostereo);
 
