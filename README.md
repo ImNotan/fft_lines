@@ -14,6 +14,7 @@ This Windows application allows users to visualize the Fast Fourier Transform (F
     -  3D-mode
     -  Circle-mode
     -  Wave-mode
+    -  Stereo-mode
 - Additional serial output for led-strip [Arduino Code](https://github.com/ImNotan/fft_lines_arduino)
 
 ## Roadmap
@@ -21,14 +22,12 @@ This Windows application allows users to visualize the Fast Fourier Transform (F
 - serial mode with Arduino
 - a bunch of style settings
 - saving settings
+- Stereo-mode
 
 ### Currently working on
 - Adding propper documentation
 - Improving clarity / cleaning up unused and unnecassary code
 - Adding propper Error handling
-
-### Coming
-- Stereo effect
 
 ## Screenshots
 
