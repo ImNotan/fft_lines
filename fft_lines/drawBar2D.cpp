@@ -337,7 +337,7 @@ void DrawBottomBar(HWND hwnd)
 	D2D1_RECT_F bottomBar = D2D1::Rect(windowRect.left, windowRect.top, windowRect.right, windowRect.bottom);
 
 	//Fill bottom bar
-	pBrush->SetColor(D2D1::ColorF(0.15f, 0.15f, 0.15f));
+	pBrush->SetColor(D2D1::ColorF(0.10f, 0.10f, 0.10f));
 	pRenderTarget->FillRectangle(bottomBar, pBrush);
 	//Border bottom bar
 	pBrush->SetColor(D2D1::ColorF(0, 0, 0));
@@ -411,7 +411,7 @@ void DrawBackground(RECT windowRect)
 	else
 	{
 		D2D1_RECT_F backgroundRect = D2D1::RectF(windowRect.left, windowRect.top, windowRect.right, windowRect.bottom);
-		pBrush->SetColor(D2D1::ColorF(0.3f, 0.3f, 0.3f));
+		pBrush->SetColor(D2D1::ColorF(0.2f, 0.2f, 0.2f));
 		pRenderTarget->FillRectangle(&backgroundRect, pBrush);
 
 		if (circle)

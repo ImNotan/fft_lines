@@ -17,7 +17,7 @@
 #define DEFAULT_STEREO 0
 
 #define DEFAULT_BOTTOMBARHEIGHT 30
-#define DEFAULT_LEDBAR 3
+#define DEFAULT_LEDBAR 4
 
 typedef struct _BARINFO
 {
