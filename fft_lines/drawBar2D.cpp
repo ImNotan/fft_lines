@@ -9,6 +9,8 @@ extern "C"
 #include "settingsFile.h"
 #include "variables.h"
 #include "global.h"
+
+#include "beatDetector.h"
 }
 
 #pragma comment(lib, "d2d1.lib")
@@ -265,7 +267,7 @@ HRESULT CreateGraphicsResources(HWND hwnd)
 		D2D1_SIZE_U size = D2D1::SizeU(windowRect.right, windowRect.bottom);
 
 		hr = pFactory->CreateHwndRenderTarget(
-			D2D1::RenderTargetProperties(D2D1_RENDER_TARGET_TYPE_HARDWARE, D2D1::PixelFormat(DXGI_FORMAT_UNKNOWN, D2D1_ALPHA_MODE_IGNORE)),
+			D2D1::RenderTargetProperties(D2D1_RENDER_TARGET_TYPE_DEFAULT, D2D1::PixelFormat(DXGI_FORMAT_UNKNOWN, D2D1_ALPHA_MODE_IGNORE)),
 			D2D1::HwndRenderTargetProperties(hwnd, size, D2D1_PRESENT_OPTIONS_NONE),
 			&pRenderTarget);
 		CHECK_ERROR(hr);
@@ -304,7 +306,7 @@ HRESULT CreateGraphicsResources(HWND hwnd)
 
 			hr = pRenderTarget->CreateRadialGradientBrush(
 				D2D1::RadialGradientBrushProperties(
-					D2D1::Point2F(windowRect.right / 2, (windowRect.bottom - bottomBarHeihgt) / 2),
+					D2D1::Point2F(windowRect.right / 2, ((windowRect.bottom - bottomBarHeihgt) / 2)),
 					D2D1::Point2F(0, 0),
 					200,
 					200),
@@ -351,11 +353,14 @@ void DrawBottomBar(HWND hwnd)
 	{
 		windowRect.left = windowRect.right / 2;
 		long horizontalSize = windowRect.right - windowRect.left;
+		long horizontalSizeSplit = horizontalSize / 10;
+		int barCountSplit10 = barCount / 10;
+		int barCountSplit20 = barCountSplit10 / 2;
 		int j = 9;
 		for (int i = 0; i < 10; i++)
 		{
-			textRect = D2D1::Rect(windowRect.left + i * (horizontalSize / 10), windowRect.bottom, windowRect.left + i * (horizontalSize / 10) + (horizontalSize / 10), windowRect.bottom - bottomBarHeihgt);
-			int freq = (j * (barCount / 10) + (barCount / 20)) * (wfx.nSamplesPerSec / N);
+			textRect = D2D1::Rect(windowRect.left + i * horizontalSizeSplit, windowRect.bottom, windowRect.left + i * horizontalSizeSplit + horizontalSizeSplit, windowRect.bottom - bottomBarHeihgt);
+			int freq = (j * barCountSplit10 + barCountSplit20) * (wfx.nSamplesPerSec / N);
 			wchar_t buffer[9] = L"        ";
 			wsprintfW(buffer, L"%dHz ", freq);
 			pRenderTarget->DrawTextW(buffer, 8, pTextFormat, textRect, pBrush);
@@ -366,8 +371,8 @@ void DrawBottomBar(HWND hwnd)
 		windowRect.right = windowRect.right / 2;
 		for (int i = 0; i < 10; i++)
 		{
-			textRect = D2D1::Rect(windowRect.left + i * (horizontalSize / 10), windowRect.bottom, windowRect.left + i * (horizontalSize / 10) + (horizontalSize / 10), windowRect.bottom - bottomBarHeihgt);
-			int freq = (i * (barCount / 10) + (barCount / 20)) * (wfx.nSamplesPerSec / N);
+			textRect = D2D1::Rect(windowRect.left + i * horizontalSizeSplit, windowRect.bottom, windowRect.left + i * horizontalSizeSplit + horizontalSizeSplit, windowRect.bottom - bottomBarHeihgt);
+			int freq = (i * barCountSplit10 + barCountSplit20) * (wfx.nSamplesPerSec / N);
 			wchar_t buffer[9] = L"        ";
 			wsprintfW(buffer, L"%dHz ", freq);
 			pRenderTarget->DrawTextW(buffer, 8, pTextFormat, textRect, pBrush);
@@ -375,10 +380,13 @@ void DrawBottomBar(HWND hwnd)
 	}
 	else if (stereo == 0)
 	{
+		long horizontalSizeSplit = windowRect.right / 10;
+		int barCountSplit10 = barCount / 10;
+		int barCountSplit20 = barCountSplit10 / 2;
 		for (int i = 0; i < 10; i++)
 		{
-			textRect = D2D1::Rect(i * (windowRect.right / 10), windowRect.bottom, i * (windowRect.right / 10) + (windowRect.right / 10), windowRect.bottom - bottomBarHeihgt);
-			int freq = (i * (barCount / 10) + (barCount / 20)) * (wfx.nSamplesPerSec / N);
+			textRect = D2D1::Rect(i * horizontalSizeSplit, windowRect.bottom, i * horizontalSizeSplit + horizontalSizeSplit, windowRect.bottom - bottomBarHeihgt);
+			int freq = (i * barCountSplit10 + barCountSplit20) * (wfx.nSamplesPerSec / N);
 			wchar_t buffer[9] = L"        ";
 			wsprintfW(buffer, L"%dHz ", freq);
 			pRenderTarget->DrawTextW(buffer, 8, pTextFormat, textRect, pBrush);
@@ -416,22 +424,12 @@ void DrawBackground(RECT windowRect)
 
 		if (circle)
 		{
-			if (stereo == 0)
-			{
-				D2D1_ELLIPSE backgroundEllipse = D2D1::Ellipse(D2D1::Point2F(windowRect.right / 2, windowRect.bottom / 2), 200, 200);
-				pradialBrush->SetCenter(D2D1::Point2F(windowRect.right / 2, windowRect.bottom / 2));
-				pRenderTarget->FillEllipse(backgroundEllipse, pradialBrush);
-			}
-			else if (stereo == 1)
-			{
-				D2D1_ELLIPSE backgroundEllipse = D2D1::Ellipse(D2D1::Point2F(windowRect.right * 0.25, windowRect.bottom / 2), 200, 200);
-				pradialBrush->SetCenter(D2D1::Point2F(windowRect.right * 0.25, windowRect.bottom / 2));
-				pRenderTarget->FillEllipse(backgroundEllipse, pradialBrush);
-
-				backgroundEllipse = D2D1::Ellipse(D2D1::Point2F(windowRect.right * 0.75, windowRect.bottom / 2), 200, 200);
-				pradialBrush->SetCenter(D2D1::Point2F(windowRect.right * 0.75, windowRect.bottom / 2));
-				pRenderTarget->FillEllipse(backgroundEllipse, pradialBrush);
-			}
+			int beatValue = GetBeatValue();
+			D2D1_ELLIPSE backgroundEllipse = D2D1::Ellipse(D2D1::Point2F(windowRect.right / 2, (windowRect.bottom / 2) - 20), beatValue, beatValue);
+			pradialBrush->SetCenter(D2D1::Point2F(windowRect.right / 2, (windowRect.bottom / 2) - 20));
+			pradialBrush->SetRadiusX(beatValue);
+			pradialBrush->SetRadiusY(beatValue);
+			pRenderTarget->FillEllipse(backgroundEllipse, pradialBrush);
 		}
 	}
 }
@@ -453,6 +451,9 @@ void DrawBars(RECT windowRect)
 
 	if (dofft)
 	{
+		long centerX = windowRect.right / 2;
+		long centerY = windowRect.bottom / 2;
+
 		switch (stereo << 2 | circle << 1 | gradient)
 		{
 			case 0b100: //draws stereo first and then does no stereo & no gradient & no cricle
@@ -497,34 +498,42 @@ void DrawBars(RECT windowRect)
 
 			case 0b110:
 			{
-				windowRect.left = (windowRect.right / 2);
-
 				float rotation = 0.0f;
 				int radius = 200;
 				for (int i = 0; i < barCount; i++)
 				{
-					pRenderTarget->SetTransform(D2D1::Matrix3x2F::Rotation(rotation, D2D1::Point2F(windowRect.right * 0.75, windowRect.bottom / 2)));
-					rotation -= 360.0f / barCount;
+					pRenderTarget->SetTransform(D2D1::Matrix3x2F::Rotation(rotation, D2D1::Point2F(centerX, centerY - 20)));
+					rotation -= 180.0f / barCount;
 
-					barRect = D2D1::Rect((long)(windowRect.right * 0.75) - 3, windowRect.bottom / 2 + radius + barLeft[i].height, (long)(windowRect.right * 0.75) + 3, windowRect.bottom / 2 + radius);
+					barRect = D2D1::Rect(centerX - 3, centerY - 20 + radius + barLeft[i].height, centerX + 3, centerY - 20 + radius);
 					pRenderTarget->FillRectangle(&barRect, pbarBrushSolid[(unsigned int)((float)(((float)i / ((float)barCount - 1.0)) * 254.0))]);
 				}
 
 				pRenderTarget->SetTransform(D2D1::Matrix3x2F::Rotation(0.0f, D2D1::Point2F(0, 0)));
+				rotation = 0.0f;
+				radius = 200;
+				for (int i = 0; i < barCount; i++)
+				{
+					pRenderTarget->SetTransform(D2D1::Matrix3x2F::Rotation(rotation, D2D1::Point2F(centerX, centerY - 20)));
+					rotation += 180.0f / barCount;
 
-				windowRect.left = 0;
-				windowRect.right = windowRect.right / 2;
+					barRect = D2D1::Rect(centerX - 3, centerY - 20 + radius + barLeft[i].height, centerX + 3, centerY - 20 + radius);
+					pRenderTarget->FillRectangle(&barRect, pbarBrushSolid[(unsigned int)((float)(((float)i / ((float)barCount - 1.0)) * 254.0))]);
+				}
+
+				pRenderTarget->SetTransform(D2D1::Matrix3x2F::Rotation(0.0f, D2D1::Point2F(0, 0)));
 			}
+			break;
 			case 0b010: //no stereo & no gradient & circle
 			{
 				float rotation = 0.0f;
 				int radius = 200;
 				for (int i = 0; i < barCount; i++)
 				{
-					pRenderTarget->SetTransform(D2D1::Matrix3x2F::Rotation(rotation, D2D1::Point2F(windowRect.right / 2, windowRect.bottom / 2)));
+					pRenderTarget->SetTransform(D2D1::Matrix3x2F::Rotation(rotation, D2D1::Point2F(centerX, centerY - 20)));
 					rotation += 360.0f / barCount;
 
-					barRect = D2D1::Rect(windowRect.right / 2 - 3, windowRect.bottom / 2 + radius + barLeft[i].height, windowRect.right / 2 + 3, windowRect.bottom / 2 + radius);
+					barRect = D2D1::Rect(centerX - 3, centerY - 20 + radius + barLeft[i].height, centerX + 3, centerY - 20 + radius);
 					pRenderTarget->FillRectangle(&barRect, pbarBrushSolid[(unsigned int)((float)(((float)i / ((float)barCount - 1.0)) * 254.0))]);
 				}
 
@@ -534,40 +543,52 @@ void DrawBars(RECT windowRect)
 
 			case 0b111: //first does stereo & gradient & circle and then no stereo & gradient & circle
 			{
-				windowRect.left = (windowRect.right / 2);
-
 				float rotation = 0.0f;
 				int radius = 200;
 				for (int i = 0; i < barCount; i++)
 				{
-					pRenderTarget->SetTransform(D2D1::Matrix3x2F::Rotation(rotation, D2D1::Point2F(windowRect.right * 0.75, windowRect.bottom / 2)));
-					rotation -= 360.0f / barCount;
+					pRenderTarget->SetTransform(D2D1::Matrix3x2F::Rotation(rotation, D2D1::Point2F(centerX, centerY - 20)));
+					rotation -= 180.0f / barCount;
 
-					pbarBrushGradient[(unsigned int)((float)(((float)i / ((float)barCount - 1.0)) * 254.0))]->SetStartPoint(D2D1::Point2F(windowRect.right * 0.75, windowRect.bottom / 2 + radius + barRight[i].height));
-					pbarBrushGradient[(unsigned int)((float)(((float)i / ((float)barCount - 1.0)) * 254.0))]->SetEndPoint(D2D1::Point2F(windowRect.right * 0.75, windowRect.bottom / 2 + radius));
+					pbarBrushGradient[(unsigned int)((float)(((float)i / ((float)barCount - 1.0)) * 254.0))]->SetStartPoint(D2D1::Point2F(centerX, centerY - 20 + radius + barRight[i].height));
+					pbarBrushGradient[(unsigned int)((float)(((float)i / ((float)barCount - 1.0)) * 254.0))]->SetEndPoint(D2D1::Point2F(centerX, centerY - 20 + radius));
 
-					barRect = D2D1::Rect((long)(windowRect.right * 0.75) - 3, windowRect.bottom / 2 + radius + barRight[i].height, (long)(windowRect.right * 0.75) + 3, windowRect.bottom / 2 + radius);
+					barRect = D2D1::Rect(centerX - 3, centerY - 20 + radius + barRight[i].height, centerX + 3, centerY - 20 + radius);
 					pRenderTarget->FillRectangle(&barRect, pbarBrushGradient[(unsigned int)((float)(((float)i / ((float)barCount - 1.0)) * 254.0))]);
 				}
 
 				pRenderTarget->SetTransform(D2D1::Matrix3x2F::Rotation(0.0f, D2D1::Point2F(0, 0)));
 
-				windowRect.left = 0;
-				windowRect.right = windowRect.right / 2;
+				rotation = 0.0f;
+				radius = 200;
+				for (int i = 0; i < barCount; i++)
+				{
+					pRenderTarget->SetTransform(D2D1::Matrix3x2F::Rotation(rotation, D2D1::Point2F(centerX, centerY - 20)));
+					rotation += 180.0f / barCount;
+
+					pbarBrushGradient[(unsigned int)((float)(((float)i / ((float)barCount - 1.0)) * 254.0))]->SetStartPoint(D2D1::Point2F(centerX, centerY - 20 + radius + barLeft[i].height));
+					pbarBrushGradient[(unsigned int)((float)(((float)i / ((float)barCount - 1.0)) * 254.0))]->SetEndPoint(D2D1::Point2F(centerX, centerY - 20 + radius));
+
+					barRect = D2D1::Rect(centerX - 3, centerY - 20 + radius + barLeft[i].height, centerX + 3, centerY - 20 + radius);
+					pRenderTarget->FillRectangle(&barRect, pbarBrushGradient[(unsigned int)((float)(((float)i / ((float)barCount - 1.0)) * 254.0))]);
+				}
+
+				pRenderTarget->SetTransform(D2D1::Matrix3x2F::Rotation(0.0f, D2D1::Point2F(0, 0)));
 			}
+			break;
 			case 0b011: //no stereo & gradient & circle
 			{
 				float rotation = 0.0f;
 				int radius = 200;
 				for (int i = 0; i < barCount; i++)
 				{
-					pRenderTarget->SetTransform(D2D1::Matrix3x2F::Rotation(rotation, D2D1::Point2F(windowRect.right / 2, windowRect.bottom / 2)));
+					pRenderTarget->SetTransform(D2D1::Matrix3x2F::Rotation(rotation, D2D1::Point2F(centerX, centerY)));
 					rotation += 360.0f / barCount;
 
-					pbarBrushGradient[(unsigned int)((float)(((float)i / ((float)barCount - 1.0)) * 254.0))]->SetStartPoint(D2D1::Point2F(windowRect.right / 2, windowRect.bottom / 2 + radius + barLeft[i].height));
-					pbarBrushGradient[(unsigned int)((float)(((float)i / ((float)barCount - 1.0)) * 254.0))]->SetEndPoint(D2D1::Point2F(windowRect.right / 2, windowRect.bottom / 2 + radius));
+					pbarBrushGradient[(unsigned int)((float)(((float)i / ((float)barCount - 1.0)) * 254.0))]->SetStartPoint(D2D1::Point2F(centerX, centerY + radius + barLeft[i].height));
+					pbarBrushGradient[(unsigned int)((float)(((float)i / ((float)barCount - 1.0)) * 254.0))]->SetEndPoint(D2D1::Point2F(centerX, centerY + radius));
 
-					barRect = D2D1::Rect(windowRect.right / 2 - 3, windowRect.bottom / 2 + radius + barLeft[i].height, windowRect.right / 2 + 3, windowRect.bottom / 2 + radius);
+					barRect = D2D1::Rect(centerX - 3, centerY + radius + barLeft[i].height, centerX + 3, centerY + radius);
 					pRenderTarget->FillRectangle(&barRect, pbarBrushGradient[(unsigned int)((float)(((float)i / ((float)barCount - 1.0)) * 254.0))]);
 				}
 

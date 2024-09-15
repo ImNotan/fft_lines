@@ -13,6 +13,7 @@
 #include "serialDialog.h"
 #include "global.h"
 #include "fft_calculate.h"
+#include "beatDetector.h"
 
 #include "styleDialog.h"
 #include "settingsFile.h"
@@ -207,7 +208,7 @@ LRESULT CALLBACK WndProc(HWND hwnd, UINT msg, WPARAM wParam, LPARAM lParam)
 			GetClientRect(hwnd, &windowRect);
 			for (int i = 0; i < N; i++)
 			{
-				waveBar[i].height = audioBufferLeft[i] * 0.01f + (windowRect.bottom - bottomBarHeihgt) / 2 + 50;
+				waveBar[i].height = audioBufferLeft[i] * 0.02f + (windowRect.bottom - bottomBarHeihgt) / 2 + 50;
 			}
 		}
 
@@ -231,6 +232,8 @@ LRESULT CALLBACK WndProc(HWND hwnd, UINT msg, WPARAM wParam, LPARAM lParam)
 		frameRate = 1000000 / averageTick;
 
 		QueryPerformanceCounter(&StartingTime);
+
+		AddBeatSample((barLeft[3].height + barLeft[4].height + barLeft[5].height + barLeft[6].height) / 4);
 
 		hr = OnPaint(hwnd, frameRate);
 		CHECK_ERROR(hr);

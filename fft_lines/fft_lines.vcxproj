@@ -149,6 +149,7 @@
     </PostBuildEvent>
   </ItemDefinitionGroup>
   <ItemGroup>
+    <ClCompile Include="beatDetector.c" />
     <ClCompile Include="deviceDialog.c" />
     <ClCompile Include="drawBar2D.cpp" />
     <ClCompile Include="fft_calculate.c" />
@@ -159,6 +160,7 @@
     <ClCompile Include="wasapi_audio.cpp" />
   </ItemGroup>
   <ItemGroup>
+    <ClInclude Include="beatDetector.h" />
     <ClInclude Include="deviceDialog.h" />
     <ClInclude Include="fft_calculate.h" />
     <ClInclude Include="global.h" />
