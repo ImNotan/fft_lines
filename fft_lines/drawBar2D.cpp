@@ -30,6 +30,12 @@ extern "C"
                   if(FAILED(hr))  \
                     { PostMessageW(globalhwnd, WM_ERROR, hr, FILE_ERROR_CODE); return hr; }
 
+#define RANGE255(number, maxValueOfNumber) (unsigned int)((float)(((float)number / ((float)maxValueOfNumber - 1.0)) * 254.0))
+
+#define doStereo 0b100
+#define doCircle 0b010
+#define doGradient 0b001
+
 /*-----------------------------------------------
 Internal Objects
 
@@ -81,6 +87,7 @@ Public functions
 		OnPaint
 		Resize
 -----------------------------------------------*/
+
 extern "C" HRESULT PaintStart();
 extern "C" void DiscardGraphicsResources();
 extern "C" HRESULT ChangeBarBrush();
@@ -102,6 +109,7 @@ Internal functions
 		DrawFrameRate
 		CallDraws
 -----------------------------------------------*/
+
 HRESULT CreateGraphicsResources(HWND hwnd);
 HRESULT CreateBarBrush();
 
@@ -425,8 +433,8 @@ void DrawBackground(RECT windowRect)
 		if (circle)
 		{
 			int beatValue = GetBeatValue();
-			D2D1_ELLIPSE backgroundEllipse = D2D1::Ellipse(D2D1::Point2F(windowRect.right / 2, (windowRect.bottom / 2) - 20), beatValue, beatValue);
-			pradialBrush->SetCenter(D2D1::Point2F(windowRect.right / 2, (windowRect.bottom / 2) - 20));
+			D2D1_ELLIPSE backgroundEllipse = D2D1::Ellipse(D2D1::Point2F(windowRect.right / 2, (windowRect.bottom / 2) - 40), beatValue, beatValue);
+			pradialBrush->SetCenter(D2D1::Point2F(windowRect.right / 2, (windowRect.bottom / 2) - 40));
 			pradialBrush->SetRadiusX(beatValue);
 			pradialBrush->SetRadiusY(beatValue);
 			pRenderTarget->FillEllipse(backgroundEllipse, pradialBrush);
@@ -445,7 +453,7 @@ void DrawBars(RECT windowRect)
 		for (int i = 0; i < N; i++)
 		{
 			barRect = D2D1::Rect(waveBar[i].x, (int)windowRect.bottom - waveBar[i].height, waveBar[i].x + waveBar[i].width, (int)windowRect.bottom - waveBar[i].height + 20);
-			pRenderTarget->FillRectangle(&barRect, pbarBrushSolid[(unsigned int)((float)(((float)i / ((float)N - 1.0)) * 254.0))]);
+			pRenderTarget->FillRectangle(&barRect, pbarBrushSolid[RANGE255(i, N)]);
 		}
 	}
 
@@ -456,12 +464,12 @@ void DrawBars(RECT windowRect)
 
 		switch (stereo << 2 | circle << 1 | gradient)
 		{
-			case 0b100: //draws stereo first and then does no stereo & no gradient & no cricle
+			case doStereo: //draws stereo first and then does no stereo & no gradient & no cricle
 			{
 				for (int i = 0; i < barCount; i++)
 				{
 					barRect = D2D1::Rect(barRight[i].x, (int)windowRect.bottom - barRight[i].height, barRight[i].x + barRight[i].width, (int)windowRect.bottom);
-					pRenderTarget->FillRectangle(&barRect, pbarBrushSolid[(unsigned int)((float)(((float)i / ((float)barCount - 1.0)) * 254.0))]);
+					pRenderTarget->FillRectangle(&barRect, pbarBrushSolid[RANGE255(i, barCount)]);
 				}
 			}
 			case 0b000: //no stereo & no gradient & no circle
@@ -469,44 +477,49 @@ void DrawBars(RECT windowRect)
 				for (int i = 0; i < barCount; i++)
 				{
 					barRect = D2D1::Rect(barLeft[i].x, (int)windowRect.bottom - barLeft[i].height, barLeft[i].x + barLeft[i].width, (int)windowRect.bottom);
-					pRenderTarget->FillRectangle(&barRect, pbarBrushSolid[(unsigned int)((float)(((float)i / ((float)barCount - 1.0)) * 254.0))]);
+					pRenderTarget->FillRectangle(&barRect, pbarBrushSolid[RANGE255(i, barCount)]);
 				}
 			}
 			break;
 
-			case 0b101: //draws stereo first and then does no stereo & gradient & no circle
+			case (doStereo | doGradient): //draws stereo first and then does no stereo & gradient & no circle
 			{
+				unsigned int selectedBrush = 0;
 				for (int i = 0; i < barCount; i++)
 				{
-					pbarBrushGradient[(unsigned int)((float)(((float)i / ((float)barCount - 1.0)) * 254.0))]->SetStartPoint(D2D1::Point2F(0, windowRect.bottom - barRight[i].height));
-					pbarBrushGradient[(unsigned int)((float)(((float)i / ((float)barCount - 1.0)) * 254.0))]->SetEndPoint(D2D1::Point2F(0, windowRect.bottom));
+					selectedBrush = RANGE255(i, barCount);
+					pbarBrushGradient[selectedBrush]->SetStartPoint(D2D1::Point2F(0, windowRect.bottom - barRight[i].height));
+					pbarBrushGradient[selectedBrush]->SetEndPoint(D2D1::Point2F(0, windowRect.bottom));
 					barRect = D2D1::Rect(barRight[i].x, (int)windowRect.bottom - barRight[i].height, barRight[i].x + barRight[i].width, (int)windowRect.bottom);
-					pRenderTarget->FillRectangle(&barRect, pbarBrushGradient[(unsigned int)((float)(((float)i / ((float)barCount - 1.0)) * 254.0))]);
+					pRenderTarget->FillRectangle(&barRect, pbarBrushGradient[selectedBrush]);
 				}
 			}
-			case 0b001: //no stereo & gradient & no circle
+			case doGradient: //no stereo & gradient & no circle
 			{
+				unsigned int selectedBrush = 0;
 				for (int i = 0; i < barCount; i++)
 				{
-					pbarBrushGradient[(unsigned int)((float)(((float)i / ((float)barCount - 1.0)) * 254.0))]->SetStartPoint(D2D1::Point2F(0, windowRect.bottom - barLeft[i].height));
-					pbarBrushGradient[(unsigned int)((float)(((float)i / ((float)barCount - 1.0)) * 254.0))]->SetEndPoint(D2D1::Point2F(0, windowRect.bottom));
+					selectedBrush = RANGE255(i, barCount);
+					pbarBrushGradient[selectedBrush]->SetStartPoint(D2D1::Point2F(0, windowRect.bottom - barLeft[i].height));
+					pbarBrushGradient[selectedBrush]->SetEndPoint(D2D1::Point2F(0, windowRect.bottom));
 					barRect = D2D1::Rect(barLeft[i].x, (int)windowRect.bottom - barLeft[i].height, barLeft[i].x + barLeft[i].width, (int)windowRect.bottom);
-					pRenderTarget->FillRectangle(&barRect, pbarBrushGradient[(unsigned int)((float)(((float)i / ((float)barCount - 1.0)) * 254.0))]);
+					pRenderTarget->FillRectangle(&barRect, pbarBrushGradient[selectedBrush]);
 				}
 			}
 			break;
 
-			case 0b110:
+			case (doStereo | doCircle):
 			{
 				float rotation = 0.0f;
 				int radius = 200;
+				centerY -= 40;
 				for (int i = 0; i < barCount; i++)
 				{
-					pRenderTarget->SetTransform(D2D1::Matrix3x2F::Rotation(rotation, D2D1::Point2F(centerX, centerY - 20)));
+					pRenderTarget->SetTransform(D2D1::Matrix3x2F::Rotation(rotation, D2D1::Point2F(centerX, centerY)));
 					rotation -= 180.0f / barCount;
 
-					barRect = D2D1::Rect(centerX - 3, centerY - 20 + radius + barLeft[i].height, centerX + 3, centerY - 20 + radius);
-					pRenderTarget->FillRectangle(&barRect, pbarBrushSolid[(unsigned int)((float)(((float)i / ((float)barCount - 1.0)) * 254.0))]);
+					barRect = D2D1::Rect(centerX - 3, centerY + radius + barLeft[i].height, centerX + 3, centerY + radius);
+					pRenderTarget->FillRectangle(&barRect, pbarBrushSolid[RANGE255(i, barCount)]);
 				}
 
 				pRenderTarget->SetTransform(D2D1::Matrix3x2F::Rotation(0.0f, D2D1::Point2F(0, 0)));
@@ -514,82 +527,89 @@ void DrawBars(RECT windowRect)
 				radius = 200;
 				for (int i = 0; i < barCount; i++)
 				{
-					pRenderTarget->SetTransform(D2D1::Matrix3x2F::Rotation(rotation, D2D1::Point2F(centerX, centerY - 20)));
+					pRenderTarget->SetTransform(D2D1::Matrix3x2F::Rotation(rotation, D2D1::Point2F(centerX, centerY)));
 					rotation += 180.0f / barCount;
 
-					barRect = D2D1::Rect(centerX - 3, centerY - 20 + radius + barLeft[i].height, centerX + 3, centerY - 20 + radius);
-					pRenderTarget->FillRectangle(&barRect, pbarBrushSolid[(unsigned int)((float)(((float)i / ((float)barCount - 1.0)) * 254.0))]);
+					barRect = D2D1::Rect(centerX - 3, centerY + radius + barLeft[i].height, centerX + 3, centerY + radius);
+					pRenderTarget->FillRectangle(&barRect, pbarBrushSolid[RANGE255(i, barCount)]);
 				}
 
 				pRenderTarget->SetTransform(D2D1::Matrix3x2F::Rotation(0.0f, D2D1::Point2F(0, 0)));
 			}
 			break;
-			case 0b010: //no stereo & no gradient & circle
+			case doCircle: //no stereo & no gradient & circle
 			{
 				float rotation = 0.0f;
 				int radius = 200;
-				for (int i = 0; i < barCount; i++)
-				{
-					pRenderTarget->SetTransform(D2D1::Matrix3x2F::Rotation(rotation, D2D1::Point2F(centerX, centerY - 20)));
-					rotation += 360.0f / barCount;
-
-					barRect = D2D1::Rect(centerX - 3, centerY - 20 + radius + barLeft[i].height, centerX + 3, centerY - 20 + radius);
-					pRenderTarget->FillRectangle(&barRect, pbarBrushSolid[(unsigned int)((float)(((float)i / ((float)barCount - 1.0)) * 254.0))]);
-				}
-
-				pRenderTarget->SetTransform(D2D1::Matrix3x2F::Rotation(0.0f, D2D1::Point2F(0, 0)));
-			}
-			break;
-
-			case 0b111: //first does stereo & gradient & circle and then no stereo & gradient & circle
-			{
-				float rotation = 0.0f;
-				int radius = 200;
-				for (int i = 0; i < barCount; i++)
-				{
-					pRenderTarget->SetTransform(D2D1::Matrix3x2F::Rotation(rotation, D2D1::Point2F(centerX, centerY - 20)));
-					rotation -= 180.0f / barCount;
-
-					pbarBrushGradient[(unsigned int)((float)(((float)i / ((float)barCount - 1.0)) * 254.0))]->SetStartPoint(D2D1::Point2F(centerX, centerY - 20 + radius + barRight[i].height));
-					pbarBrushGradient[(unsigned int)((float)(((float)i / ((float)barCount - 1.0)) * 254.0))]->SetEndPoint(D2D1::Point2F(centerX, centerY - 20 + radius));
-
-					barRect = D2D1::Rect(centerX - 3, centerY - 20 + radius + barRight[i].height, centerX + 3, centerY - 20 + radius);
-					pRenderTarget->FillRectangle(&barRect, pbarBrushGradient[(unsigned int)((float)(((float)i / ((float)barCount - 1.0)) * 254.0))]);
-				}
-
-				pRenderTarget->SetTransform(D2D1::Matrix3x2F::Rotation(0.0f, D2D1::Point2F(0, 0)));
-
-				rotation = 0.0f;
-				radius = 200;
-				for (int i = 0; i < barCount; i++)
-				{
-					pRenderTarget->SetTransform(D2D1::Matrix3x2F::Rotation(rotation, D2D1::Point2F(centerX, centerY - 20)));
-					rotation += 180.0f / barCount;
-
-					pbarBrushGradient[(unsigned int)((float)(((float)i / ((float)barCount - 1.0)) * 254.0))]->SetStartPoint(D2D1::Point2F(centerX, centerY - 20 + radius + barLeft[i].height));
-					pbarBrushGradient[(unsigned int)((float)(((float)i / ((float)barCount - 1.0)) * 254.0))]->SetEndPoint(D2D1::Point2F(centerX, centerY - 20 + radius));
-
-					barRect = D2D1::Rect(centerX - 3, centerY - 20 + radius + barLeft[i].height, centerX + 3, centerY - 20 + radius);
-					pRenderTarget->FillRectangle(&barRect, pbarBrushGradient[(unsigned int)((float)(((float)i / ((float)barCount - 1.0)) * 254.0))]);
-				}
-
-				pRenderTarget->SetTransform(D2D1::Matrix3x2F::Rotation(0.0f, D2D1::Point2F(0, 0)));
-			}
-			break;
-			case 0b011: //no stereo & gradient & circle
-			{
-				float rotation = 0.0f;
-				int radius = 200;
+				centerY -= 40;
 				for (int i = 0; i < barCount; i++)
 				{
 					pRenderTarget->SetTransform(D2D1::Matrix3x2F::Rotation(rotation, D2D1::Point2F(centerX, centerY)));
 					rotation += 360.0f / barCount;
 
-					pbarBrushGradient[(unsigned int)((float)(((float)i / ((float)barCount - 1.0)) * 254.0))]->SetStartPoint(D2D1::Point2F(centerX, centerY + radius + barLeft[i].height));
-					pbarBrushGradient[(unsigned int)((float)(((float)i / ((float)barCount - 1.0)) * 254.0))]->SetEndPoint(D2D1::Point2F(centerX, centerY + radius));
+					barRect = D2D1::Rect(centerX - 3, centerY + radius + barLeft[i].height, centerX + 3, centerY + radius);
+					pRenderTarget->FillRectangle(&barRect, pbarBrushSolid[RANGE255(i, barCount)]);
+				}
+
+				pRenderTarget->SetTransform(D2D1::Matrix3x2F::Rotation(0.0f, D2D1::Point2F(0, 0)));
+			}
+			break;
+
+			case (doStereo | doCircle | doGradient): //first does stereo & gradient & circle and then no stereo & gradient & circle
+			{
+				float rotation = 0.0f;
+				int radius = 200;
+				unsigned int selectedBrush = 0;
+				centerY -= 40;
+				for (int i = 0; i < barCount; i++)
+				{
+					selectedBrush = RANGE255(i, barCount);
+					pRenderTarget->SetTransform(D2D1::Matrix3x2F::Rotation(rotation, D2D1::Point2F(centerX, centerY)));
+					rotation -= 180.0f / barCount;
+
+					pbarBrushGradient[selectedBrush]->SetStartPoint(D2D1::Point2F(centerX, centerY + radius + barRight[i].height));
+					pbarBrushGradient[selectedBrush]->SetEndPoint(D2D1::Point2F(centerX, centerY + radius));
+
+					barRect = D2D1::Rect(centerX - 3, centerY + radius + barRight[i].height, centerX + 3, centerY + radius);
+					pRenderTarget->FillRectangle(&barRect, pbarBrushGradient[selectedBrush]);
+				}
+
+				pRenderTarget->SetTransform(D2D1::Matrix3x2F::Rotation(0.0f, D2D1::Point2F(0, 0)));
+
+				rotation = 0.0f;
+				for (int i = 0; i < barCount; i++)
+				{
+					selectedBrush = RANGE255(i, barCount);
+					pRenderTarget->SetTransform(D2D1::Matrix3x2F::Rotation(rotation, D2D1::Point2F(centerX, centerY)));
+					rotation += 180.0f / barCount;
+
+					pbarBrushGradient[selectedBrush]->SetStartPoint(D2D1::Point2F(centerX, centerY + radius + barLeft[i].height));
+					pbarBrushGradient[selectedBrush]->SetEndPoint(D2D1::Point2F(centerX, centerY + radius));
 
 					barRect = D2D1::Rect(centerX - 3, centerY + radius + barLeft[i].height, centerX + 3, centerY + radius);
-					pRenderTarget->FillRectangle(&barRect, pbarBrushGradient[(unsigned int)((float)(((float)i / ((float)barCount - 1.0)) * 254.0))]);
+					pRenderTarget->FillRectangle(&barRect, pbarBrushGradient[selectedBrush]);
+				}
+
+				pRenderTarget->SetTransform(D2D1::Matrix3x2F::Rotation(0.0f, D2D1::Point2F(0, 0)));
+			}
+			break;
+			case (doCircle | doGradient): //no stereo & gradient & circle
+			{
+				float rotation = 0.0f;
+				int radius = 200;
+				unsigned int selectedBrush = 0;
+				centerY -= 40;
+				for (int i = 0; i < barCount; i++)
+				{
+					selectedBrush = RANGE255(i, barCount);
+					pRenderTarget->SetTransform(D2D1::Matrix3x2F::Rotation(rotation, D2D1::Point2F(centerX, centerY)));
+					rotation += 360.0f / barCount;
+
+					pbarBrushGradient[selectedBrush]->SetStartPoint(D2D1::Point2F(centerX, centerY + radius + barLeft[i].height));
+					pbarBrushGradient[selectedBrush]->SetEndPoint(D2D1::Point2F(centerX, centerY + radius));
+
+					barRect = D2D1::Rect(centerX - 3, centerY + radius + barLeft[i].height, centerX + 3, centerY + radius);
+					pRenderTarget->FillRectangle(&barRect, pbarBrushGradient[selectedBrush]);
 				}
 
 				pRenderTarget->SetTransform(D2D1::Matrix3x2F::Rotation(0.0f, D2D1::Point2F(0, 0)));
@@ -607,7 +627,7 @@ void DrawFrameRate(RECT windowRect, int frameRate)
 	wchar_t buffer[15] = L"       ";
 	wsprintfW(buffer, L"%d", frameRate);
 
-	pBrush->SetColor(D2D1::ColorF(0.15f, 0.15f, 0.15f));
+	pBrush->SetColor(D2D1::ColorF(0.10f, 0.10f, 0.10f));
 	pRenderTarget->FillRectangle(&textRect, pBrush);
 	pBrush->SetColor(D2D1::ColorF(1.0f, 1.0f, 1.0f));
 	pRenderTarget->DrawTextW(buffer, 8, pTextFormat, textRect, pBrush);

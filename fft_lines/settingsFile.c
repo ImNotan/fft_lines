@@ -105,6 +105,7 @@ Public functions
 	manipulation of barsize:
 		ResizeBars
 -----------------------------------------------*/
+
 HRESULT initializeSettingsFile(HWND hwnd);
 void uninitializeSettingsFile();
 
@@ -114,14 +115,8 @@ HRESULT InitializeMemory();
 HRESULT readSettings();
 void writeSettings();
 
-void ResizeBars(HWND hwnd, BARINFO* bars, int size);
+void ResizeBars(HWND hwnd, BARINFO * bars, int size, int channel, int doStereo);
 
-/*-----------------------------------------------
-Internal functions
-
-	manipulation of variables:
-		setColor
------------------------------------------------*/
 void setColor();
 
 /*-----------------------------------------------
@@ -140,7 +135,7 @@ HRESULT initializeSettingsFile(HWND hwnd)
 		hSettingsFile = CreateFileW(L"Settings.txt", GENERIC_READ | GENERIC_WRITE, 0, NULL, CREATE_NEW, FILE_ATTRIBUTE_NORMAL, NULL);
 		if (hSettingsFile == INVALID_HANDLE_VALUE)
 		{
-			hr = hSettingsFile;
+			hr = E_FAIL;
 			CHECK_ERROR(hr);
 		}
 	}
