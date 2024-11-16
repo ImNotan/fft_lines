@@ -199,7 +199,8 @@ LRESULT CALLBACK WndProc(HWND hwnd, UINT msg, WPARAM wParam, LPARAM lParam)
 
 		free(input);
 		free(output);
-		
+		input = NULL;
+		output = NULL;
 			
 		//Copys audio buffer
 		if(waveform)

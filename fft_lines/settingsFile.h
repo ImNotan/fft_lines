@@ -15,6 +15,7 @@
 #define DEFAULT_CIRCLE 0
 #define DEFAULT_WAVEFORM 0
 #define DEFAULT_STEREO 0
+#define DEFAULT_BEATDETECTION 1
 
 #define DEFAULT_BOTTOMBARHEIGHT 30
 #define DEFAULT_LEDBAR 4
@@ -47,6 +48,8 @@ extern double* pGradients;
 extern INT16* audioBufferLeft;
 extern INT16* audioBufferRight;
 
+extern int* bassBeatBuffer;
+
 extern float zoom;
 extern LRESULT colorSel;
 
@@ -59,6 +62,7 @@ extern bool ignoreSerial;
 extern bool circle;
 extern bool waveform;
 extern bool stereo;
+extern bool beatDetection;
 
 extern bool redrawAll;
 
