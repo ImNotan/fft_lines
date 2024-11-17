@@ -457,6 +457,15 @@ void DrawBars(RECT windowRect)
 		}
 	}
 
+	if (beatDetection)
+	{
+		for (int i = 0; i < N; i++)
+		{
+			barRect = D2D1::Rect(waveBar[i].x, (int)windowRect.bottom - waveBar[i].height, waveBar[i].x + waveBar[i].width, (int)windowRect.bottom - waveBar[i].height + 20);
+			pRenderTarget->FillRectangle(&barRect, pbarBrushSolid[RANGE255(i, N)]);
+		}
+	}
+
 	if (dofft)
 	{
 		long centerX = windowRect.right / 2;

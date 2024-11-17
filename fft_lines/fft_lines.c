@@ -197,13 +197,18 @@ LRESULT CALLBACK WndProc(HWND hwnd, UINT msg, WPARAM wParam, LPARAM lParam)
 			}
 		}
 
+		if (beatDetection)
+		{
+			BassBeatDetector(input, output);
+		}
+
 		free(input);
 		free(output);
 		input = NULL;
 		output = NULL;
 			
 		//Copys audio buffer
-		if(waveform)
+		if (waveform)
 		{
 			RECT windowRect;
 			GetClientRect(hwnd, &windowRect);
@@ -220,7 +225,6 @@ LRESULT CALLBACK WndProc(HWND hwnd, UINT msg, WPARAM wParam, LPARAM lParam)
 			line[0] = (char)((float)barLeft[led_bar].height * 0.1f);
 			WriteSerial(line, globalhwnd);
 		}
-
 
 		//Calculate fps
 		QueryPerformanceCounter(&EndingTime);
@@ -355,6 +359,7 @@ LRESULT CALLBACK WndProc(HWND hwnd, UINT msg, WPARAM wParam, LPARAM lParam)
 			CloseSerial(hwnd);
 
 		KillTimer(hwnd, ID_TIMER_UPDATE);
+		//KillTimer(hwnd, ID_TIMER_UPDATE2);
 
 		//Destroy dialog if open
 		DestroyWindow(hwndStyleDialog);

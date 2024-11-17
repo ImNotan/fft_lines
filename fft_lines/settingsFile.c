@@ -71,6 +71,7 @@ defined in settings.h
 BARINFO* barLeft = NULL;
 BARINFO* barRight = NULL;
 BARINFO* waveBar = NULL;
+BARINFO* beatBar = NULL;
 
 double* pGradients = &plasma;
 
@@ -294,6 +295,15 @@ HRESULT InitializeMemory()
 		int* tmp = (int*)realloc(bassBeatBuffer, N * sizeof(int));
 		CHECK_NULL(tmp);
 		bassBeatBuffer = tmp;
+		for (int i = 0; i < N; i++)
+		{
+			bassBeatBuffer[i] = 0;
+		}
+
+		BARINFO* bartmp = (BARINFO*)realloc(beatBar, N * sizeof(BARINFO));
+		CHECK_NULL(bartmp);
+		beatBar = bartmp;
+		ResizeBars(globalhwnd, beatBar, N, 0, 0);
 	}
 
 	redrawAll = true;
@@ -341,6 +351,8 @@ void UninitializeMemory()
 
 	if (beatDetection)
 	{
+		free(beatBar);
+		beatBar = NULL;
 		free(bassBeatBuffer);
 		bassBeatBuffer = NULL;
 	}

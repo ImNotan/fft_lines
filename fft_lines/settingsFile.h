@@ -1,4 +1,6 @@
 #pragma once
+#include <Windows.h>
+#include <stdbool.h>
 #define MAX_BARCOUNT 1000
 #define MIN_BARCOUNT 100
 #define MAX_ZOOM 0.001f
@@ -42,6 +44,7 @@ extern void ResizeBars(HWND hwnd, BARINFO* bars, int size, int channel, int dost
 extern BARINFO* barLeft;
 extern BARINFO* barRight;
 extern BARINFO* waveBar;
+extern BARINFO* beatBar;
 
 extern double* pGradients;
 

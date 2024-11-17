@@ -354,9 +354,20 @@ LRESULT CALLBACK StyleDialogProc(HWND hwnd, UINT Message, WPARAM wParam, LPARAM 
 						int* tmp = (int*)realloc(bassBeatBuffer, N * sizeof(int));
 						CHECK_NULL(tmp);
 						bassBeatBuffer = tmp;
+						for (int i = 0; i < N; i++)
+						{
+							bassBeatBuffer[i] = 0;
+						}
+
+						BARINFO* bartmp = (BARINFO*)realloc(beatBar, N * sizeof(BARINFO));
+						CHECK_NULL(bartmp);
+						beatBar = bartmp;
+						ResizeBars(globalhwnd, beatBar, N, 0, 0);
 					}
 					else
 					{
+						free(waveBar);
+						waveBar = NULL;
 						free(bassBeatBuffer);
 						bassBeatBuffer = NULL;
 					}
