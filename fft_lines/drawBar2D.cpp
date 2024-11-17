@@ -459,9 +459,9 @@ void DrawBars(RECT windowRect)
 
 	if (beatDetection)
 	{
-		for (int i = 0; i < N; i++)
+		for (int i = beatposition; i < beatposition + 10 && i < N; i++)
 		{
-			barRect = D2D1::Rect(waveBar[i].x, (int)windowRect.bottom - waveBar[i].height, waveBar[i].x + waveBar[i].width, (int)windowRect.bottom - waveBar[i].height + 20);
+			barRect = D2D1::Rect(beatBar[i].x, (int)windowRect.top, beatBar[i].x + beatBar[i].width, (int)windowRect.top + 20);
 			pRenderTarget->FillRectangle(&barRect, pbarBrushSolid[RANGE255(i, N)]);
 		}
 	}

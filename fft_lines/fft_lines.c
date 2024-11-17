@@ -229,16 +229,27 @@ LRESULT CALLBACK WndProc(HWND hwnd, UINT msg, WPARAM wParam, LPARAM lParam)
 		//Calculate fps
 		QueryPerformanceCounter(&EndingTime);
 		ElapsedMicroseconds.QuadPart = EndingTime.QuadPart - StartingTime.QuadPart;
+		QueryPerformanceCounter(&StartingTime);
 
 		ElapsedMicroseconds.QuadPart *= 1000000;
 		ElapsedMicroseconds.QuadPart /= Frequency.QuadPart;
 
+		timeDelta = (float)ElapsedMicroseconds.QuadPart / 1000000;
+		for (int i = 0; i < (float)beatMovementPerSec * timeDelta; i++)
+		{
+			if (beatposition >= 2048)
+				direction = -1;
+			if (beatposition <= 0)
+				direction = 1;
+
+			beatposition += direction;
+		}
+
 		double averageTick = CalcAverageTick((int)(ElapsedMicroseconds.QuadPart));
 		frameRate = 1000000 / averageTick;
 
-		QueryPerformanceCounter(&StartingTime);
-
 		AddBeatSample((barLeft[3].height + barLeft[4].height + barLeft[5].height + barLeft[6].height) / 4);
+		
 
 		hr = OnPaint(hwnd, frameRate);
 		CHECK_ERROR(hr);
@@ -314,6 +325,8 @@ LRESULT CALLBACK WndProc(HWND hwnd, UINT msg, WPARAM wParam, LPARAM lParam)
 		}
 		if (waveform)
 			ResizeBars(hwnd, waveBar, N, 0, 0);
+		if (beatDetection)
+			ResizeBars(hwnd, beatBar, N, 0, 0);
 
 		hr = Resize(hwnd);
 		CHECK_ERROR(hr);

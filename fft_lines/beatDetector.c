@@ -18,6 +18,8 @@ int beatFramesRecorded = 0;
 
 float beatMovementPerSec = 0;
 int beatposition = 0;
+float timeDelta = 0;
+int direction;
 
 void AddBeatSample(int weightedAverage)
 {
@@ -45,7 +47,7 @@ void BassBeatDetector(fftwf_complex* input, fftwf_complex* output)
 	bassBeatBuffer[beatFramesRecorded] = (int)sqrt(pow(output[3][REAL], 2) + pow(output[3][IMAG], 2));
 	beatFramesRecorded++;
 
-	if (beatFramesRecorded >= 150)
+	if (beatFramesRecorded >= 250)
 	{
 		beatFramesRecorded = 0;
 	}
@@ -67,6 +69,8 @@ void BassBeatDetector(fftwf_complex* input, fftwf_complex* output)
 
 	int diffnew = 0;
 	int diffold = 0;
+	int peaks[30];
+	int peaknumber = 0;
 	for (int i = 0; i < 200; i++)
 	{
 		diffold = diffnew;
@@ -74,11 +78,26 @@ void BassBeatDetector(fftwf_complex* input, fftwf_complex* output)
 
 		if (diffold >= 0 && diffnew <= 0)
 		{
-			barLeft[i].height = 100;
+			//barLeft[i].height = 100;
+			peaks[peaknumber] = i;
+			peaknumber++;
+			if (peaknumber >= 30)
+				break;
 		}
 		else
 		{
-			barLeft[i].height = 0;
+			//barLeft[i].height = 0;
 		}
 	}
+
+	int highestpeak = 0;
+	for (int i = 8; i < 30; i++)
+	{
+		if (barLeft[i].height > highestpeak)
+		{
+			highestpeak = barLeft[i].height;
+			peaknumber = i;
+		}
+	}
+	beatMovementPerSec = N * timeDelta * peaks[peaknumber];
 }
