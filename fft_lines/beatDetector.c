@@ -3,7 +3,7 @@
 #include "settingsFile.h"
 #include "global.h"
 
-#define NUMBER_OF_SAMPLES 120
+#define NUMBER_OF_SAMPLES 160
 
 int beatValues[NUMBER_OF_SAMPLES];
 int currentBeatValue = 0;
@@ -44,10 +44,10 @@ int GetBeatValue()
 
 void BassBeatDetector(fftwf_complex* input, fftwf_complex* output)
 {
-	bassBeatBuffer[beatFramesRecorded] = (int)sqrt(pow(output[3][REAL], 2) + pow(output[3][IMAG], 2));
+	bassBeatBuffer[beatFramesRecorded] = (int)sqrt(pow(output[4][REAL], 2) + pow(output[4][IMAG], 2));
 	beatFramesRecorded++;
 
-	if (beatFramesRecorded >= 250)
+	if (beatFramesRecorded >= 200)
 	{
 		beatFramesRecorded = 0;
 	}
@@ -60,10 +60,12 @@ void BassBeatDetector(fftwf_complex* input, fftwf_complex* output)
 
 	fft(input, output);
 
-	for (int i = 0; i < barCount; i++)
+	int heightBuffer[NUMBER_OF_SAMPLES];
+	for (int i = 0; i < NUMBER_OF_SAMPLES; i++)
 	{
 		//Calculates distance to origin with Pythagoras in complex plane
-		barLeft[i].height = (int)(sqrt(pow(output[i][REAL], 2) + pow(output[i][IMAG], 2)) * zoom);
+		heightBuffer[i] = (int)sqrt(pow(output[i][REAL], 2) + pow(output[i][IMAG], 2));
+		//barLeft[i].height = (int)((float)heightBuffer[i] * zoom);
 	}
 
 
@@ -71,33 +73,28 @@ void BassBeatDetector(fftwf_complex* input, fftwf_complex* output)
 	int diffold = 0;
 	int peaks[30];
 	int peaknumber = 0;
-	for (int i = 0; i < 200; i++)
+	int highestpeakvalue = 0;
+	int highestpeaknumber = 0;
+	for (int i = 0; i < NUMBER_OF_SAMPLES; i++)
 	{
 		diffold = diffnew;
-		diffnew = barLeft[i + 1].height - barLeft[i].height;
+		diffnew = heightBuffer[i + 1] - heightBuffer[i];
 
 		if (diffold >= 0 && diffnew <= 0)
 		{
-			//barLeft[i].height = 100;
 			peaks[peaknumber] = i;
 			peaknumber++;
+			if (heightBuffer[i] > highestpeakvalue && i > 30)
+			{
+				highestpeakvalue = heightBuffer[i];
+				highestpeaknumber = peaknumber - 1;
+			}
 			if (peaknumber >= 30)
+			{
 				break;
-		}
-		else
-		{
-			//barLeft[i].height = 0;
+			}
 		}
 	}
 
-	int highestpeak = 0;
-	for (int i = 8; i < 30; i++)
-	{
-		if (barLeft[i].height > highestpeak)
-		{
-			highestpeak = barLeft[i].height;
-			peaknumber = i;
-		}
-	}
-	beatMovementPerSec = N * timeDelta * peaks[peaknumber];
+	beatMovementPerSec = N * timeDelta * peaks[highestpeaknumber];
 }

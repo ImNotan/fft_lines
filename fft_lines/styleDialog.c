@@ -366,8 +366,8 @@ LRESULT CALLBACK StyleDialogProc(HWND hwnd, UINT Message, WPARAM wParam, LPARAM 
 					}
 					else
 					{
-						free(waveBar);
-						waveBar = NULL;
+						free(beatBar);
+						beatBar = NULL;
 						free(bassBeatBuffer);
 						bassBeatBuffer = NULL;
 					}
