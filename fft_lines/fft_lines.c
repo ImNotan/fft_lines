@@ -206,7 +206,7 @@ LRESULT CALLBACK WndProc(HWND hwnd, UINT msg, WPARAM wParam, LPARAM lParam)
 		{
 			RECT windowRect;
 			GetClientRect(hwnd, &windowRect);
-			for (int i = 0; i < N; i++)
+			for (int i = 0; i < DEFAULT_WAVEBARBOUNT; i++)
 			{
 				waveBar[i].height = audioBufferLeft[i] * 0.02f + (windowRect.bottom - bottomBarHeihgt) / 2 + 50;
 			}
@@ -308,7 +308,7 @@ LRESULT CALLBACK WndProc(HWND hwnd, UINT msg, WPARAM wParam, LPARAM lParam)
 			}
 		}
 		if (waveform)
-			ResizeBars(hwnd, waveBar, N, 0, 0);
+			ResizeBars(hwnd, waveBar, DEFAULT_WAVEBARBOUNT, 0, 0);
 
 		hr = Resize(hwnd);
 		CHECK_ERROR(hr);
