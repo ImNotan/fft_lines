@@ -292,10 +292,10 @@ HRESULT InitializeMemory()
 
 	if (beatDetection)
 	{
-		int* tmp = (int*)realloc(bassBeatBuffer, N * sizeof(int));
+		int* tmp = (int*)realloc(bassBeatBuffer, DEFAULT_BEATBBUFFERSIZE * sizeof(int));
 		CHECK_NULL(tmp);
 		bassBeatBuffer = tmp;
-		for (int i = 0; i < N; i++)
+		for (int i = 0; i < DEFAULT_BEATBBUFFERSIZE; i++)
 		{
 			bassBeatBuffer[i] = 0;
 		}

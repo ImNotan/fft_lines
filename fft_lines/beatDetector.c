@@ -5,6 +5,12 @@
 
 #define NUMBER_OF_SAMPLES 160
 
+#define FILE_ERROR_CODE 0x00000010
+
+#define CHECK_NULL(ppT) \
+                  if((ppT) == NULL)  \
+                    { PostMessageW(globalhwnd, WM_ERROR, E_FAIL, FILE_ERROR_CODE); return E_FAIL; }
+
 int beatValues[NUMBER_OF_SAMPLES];
 int currentBeatValue = 0;
 int sumOfBeatValues = 0;
@@ -47,18 +53,18 @@ void BassBeatDetector(fftwf_complex* input, fftwf_complex* output)
 	bassBeatBuffer[beatFramesRecorded] = (int)sqrt(pow(output[4][REAL], 2) + pow(output[4][IMAG], 2));
 	beatFramesRecorded++;
 
-	if (beatFramesRecorded >= 200)
+	if (beatFramesRecorded >= 256)
 	{
 		beatFramesRecorded = 0;
 	}
 
-	for (int i = 0; i < N; i++)
+	for (int i = 0; i < DEFAULT_BEATBBUFFERSIZE; i++)
 	{
 		input[i][REAL] = (float)bassBeatBuffer[i];
 		input[i][IMAG] = 0;
 	}
 
-	fft(input, output);
+	fft256(input, output);
 
 	int heightBuffer[NUMBER_OF_SAMPLES];
 	for (int i = 0; i < NUMBER_OF_SAMPLES; i++)

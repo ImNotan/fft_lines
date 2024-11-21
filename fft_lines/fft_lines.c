@@ -50,7 +50,7 @@ HWND globalhwnd;
 #define ID_TIMER_UPDATE2 2
 
 //average frame rate calculation variables
-#define MAXSAMPLES 100
+#define MAXSAMPLES 50
 int tickindex = 0;
 int ticksum = 0;
 int ticklist[MAXSAMPLES];
@@ -196,6 +196,15 @@ LRESULT CALLBACK WndProc(HWND hwnd, UINT msg, WPARAM wParam, LPARAM lParam)
 				}
 			}
 		}
+
+		fftwf_complex* tmp;
+		tmp = (fftwf_complex*)realloc(*input, DEFAULT_BEATBBUFFERSIZE * sizeof(fftwf_complex));
+		CHECK_NULL(tmp);
+		input = tmp;
+		tmp = (fftwf_complex*)realloc(*output, DEFAULT_BEATBBUFFERSIZE * sizeof(fftwf_complex));
+		CHECK_NULL(tmp);
+		output = tmp;
+		tmp = NULL;
 
 		if (beatDetection)
 		{
