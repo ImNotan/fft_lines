@@ -278,7 +278,7 @@ LRESULT CALLBACK WndProc(HWND hwnd, UINT msg, WPARAM wParam, LPARAM lParam)
 		//averageTick = Calc5PercentLow();
 		frameRate = 1000000 / averageTick;
 
-		//AddBeatSample((barLeft[3].height + barLeft[4].height + barLeft[5].height + barLeft[6].height) / 4);
+		AddBeatSample((barLeft[3].height + barLeft[4].height + barLeft[5].height + barLeft[6].height) / 4);
 		
 		RECT windowRect;
 		GetClientRect(hwnd, &windowRect);
