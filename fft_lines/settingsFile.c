@@ -284,10 +284,10 @@ HRESULT InitializeMemory()
 
 	if (waveform)
 	{
-		BARINFO* tmp = (BARINFO*)realloc(waveBar, N * sizeof(BARINFO));
+		BARINFO* tmp = (BARINFO*)realloc(waveBar, DEFAULT_WAVEBARBOUNT * sizeof(BARINFO));
 		CHECK_NULL(tmp);
 		waveBar = tmp;
-		ResizeBars(globalhwnd, waveBar, N, 0, 0);
+		ResizeBars(globalhwnd, waveBar, DEFAULT_WAVEBARBOUNT, 0, 0);
 	}
 
 	if (beatDetection)
