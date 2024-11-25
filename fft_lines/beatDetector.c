@@ -48,7 +48,7 @@ int GetBeatValue()
 	return beatValue;
 }
 
-void BassBeatDetector(fftwf_complex* input, fftwf_complex* output)
+void BassBeatDetector(fftwf_complex* input, fftwf_complex* output, fftwf_complex* beatinput, fftwf_complex* beatoutput)
 {
 	bassBeatBuffer[beatFramesRecorded] = (int)sqrt(pow(output[4][REAL], 2) + pow(output[4][IMAG], 2));
 	beatFramesRecorded++;
@@ -60,17 +60,17 @@ void BassBeatDetector(fftwf_complex* input, fftwf_complex* output)
 
 	for (int i = 0; i < DEFAULT_BEATBBUFFERSIZE; i++)
 	{
-		input[i][REAL] = (float)bassBeatBuffer[i];
-		input[i][IMAG] = 0;
+		beatinput[i][REAL] = (float)bassBeatBuffer[i];
+		beatinput[i][IMAG] = 0;
 	}
 
-	executefft256(input, output);
+	executefft256(beatinput, beatoutput);
 
 	int heightBuffer[NUMBER_OF_SAMPLES];
 	for (int i = 0; i < NUMBER_OF_SAMPLES; i++)
 	{
 		//Calculates distance to origin with Pythagoras in complex plane
-		heightBuffer[i] = (int)sqrt(pow(output[i][REAL], 2) + pow(output[i][IMAG], 2));
+		heightBuffer[i] = (int)sqrt(pow(beatoutput[i][REAL], 2) + pow(beatoutput[i][IMAG], 2));
 		//barLeft[i].height = (int)((float)heightBuffer[i] * zoom);
 	}
 

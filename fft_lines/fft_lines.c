@@ -232,7 +232,7 @@ LRESULT CALLBACK WndProc(HWND hwnd, UINT msg, WPARAM wParam, LPARAM lParam)
 
 		if (beatDetection)
 		{
-			BassBeatDetector(beatinput, beatoutput);
+			BassBeatDetector(input, output, beatinput, beatoutput);
 		}
 			
 		//Copys audio buffer
