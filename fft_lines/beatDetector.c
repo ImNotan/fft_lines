@@ -64,7 +64,7 @@ void BassBeatDetector(fftwf_complex* input, fftwf_complex* output)
 		input[i][IMAG] = 0;
 	}
 
-	fft256(input, output);
+	executefft256(input, output);
 
 	int heightBuffer[NUMBER_OF_SAMPLES];
 	for (int i = 0; i < NUMBER_OF_SAMPLES; i++)
