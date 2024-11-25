@@ -468,7 +468,9 @@ HRESULT GetAudioBuffer(INT16 * audioBufferLeft, INT16 * audioBufferRight, int st
             if(stereo)
                 MoveArray(audioBufferRight, i, right);
             free(left);
+            left = NULL;
             free(right);
+            right = NULL;
         }
 
         hr = pCaptureClient->ReleaseBuffer(numFramesAvailable);

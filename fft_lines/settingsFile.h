@@ -1,4 +1,6 @@
 #pragma once
+#include <Windows.h>
+#include <stdbool.h>
 #define MAX_BARCOUNT 1000
 #define MIN_BARCOUNT 100
 #define MAX_ZOOM 0.001f
@@ -6,6 +8,7 @@
 #define NUMOF_GRADIENTS 6
 
 #define DEFAULT_BARCOUNT 500
+#define DEFAULT_BEATBBUFFERSIZE 256
 #define DEFAULT_WAVEBARBOUNT 2048
 #define DEFAULT_ZOOM 0.0001f
 #define DEFAULT_COLORSEL 0
@@ -16,6 +19,7 @@
 #define DEFAULT_CIRCLE 0
 #define DEFAULT_WAVEFORM 0
 #define DEFAULT_STEREO 0
+#define DEFAULT_BEATDETECTION 1
 
 #define DEFAULT_BOTTOMBARHEIGHT 30
 #define DEFAULT_LEDBAR 4
@@ -42,11 +46,14 @@ extern void ResizeBars(HWND hwnd, BARINFO* bars, int size, int channel, int dost
 extern BARINFO* barLeft;
 extern BARINFO* barRight;
 extern BARINFO* waveBar;
+extern BARINFO* beatBar;
 
 extern double* pGradients;
 
 extern INT16* audioBufferLeft;
 extern INT16* audioBufferRight;
+
+extern int* bassBeatBuffer;
 
 extern float zoom;
 extern LRESULT colorSel;
@@ -60,6 +67,7 @@ extern bool ignoreSerial;
 extern bool circle;
 extern bool waveform;
 extern bool stereo;
+extern bool beatDetection;
 
 extern bool redrawAll;
 

@@ -457,6 +457,15 @@ void DrawBars(RECT windowRect)
 		}
 	}
 
+	if (beatDetection)
+	{
+		for (int i = beatposition; i < beatposition + 20 && i < N; i++)
+		{
+			barRect = D2D1::Rect(beatBar[i].x, (int)windowRect.top, beatBar[i].x + beatBar[i].width, (int)windowRect.top + 20);
+			pRenderTarget->FillRectangle(&barRect, pbarBrushSolid[RANGE255(i, N)]);
+		}
+	}
+
 	if (dofft)
 	{
 		long centerX = windowRect.right / 2;
@@ -642,7 +651,7 @@ HRESULT CallDraws(HWND hwnd, int frameRate)
 	windowRect.bottom -= bottomBarHeihgt;
 
 	pRenderTarget->BeginDraw();
-
+	
 	//Solid or with Background effect
 	DrawBackground(windowRect);
 	DrawBars(windowRect);
@@ -669,10 +678,13 @@ HRESULT CallDraws(HWND hwnd, int frameRate)
 		D2D1_RECT_U d2d1windowRectU = D2D1::RectU(windowRect.left, windowRect.top, windowRect.right, windowRect.bottom);
 		pBufferBitmap->CopyFromRenderTarget(&upperLeft, pRenderTarget, &d2d1windowRectU);
 	}
-
+	
 	hr = pRenderTarget->EndDraw();
 	CHECK_ERROR(hr);
 
+	GetClientRect(hwnd, &windowRect);
+	ValidateRect(hwnd, &windowRect);
+	
 	return hr;
 }
 
@@ -689,7 +701,7 @@ HRESULT OnPaint(HWND hwnd, int frameRate)
 	CHECK_ERROR(hr);
 
 	hr = CallDraws(hwnd, frameRate);
-	CHECK_ERROR(hr);
+	CHECK_ERROR(hr)
 
 	return hr;
 }

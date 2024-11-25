@@ -60,6 +60,21 @@ LARGE_INTEGER Frequency;
 
 int frameRate = 0;
 
+fftwf_complex* input;
+fftwf_complex* output;
+
+fftwf_complex* beatinput;
+fftwf_complex* beatoutput;
+
+int compare(const void* a, const void* b)
+{
+	int int_a = *((int*)a);
+	int int_b = *((int*)b);
+
+	// an easy expression for comparing
+	return (int_a > int_b) - (int_a < int_b);
+}
+
 double CalcAverageTick(int newtick)
 {
 	ticksum -= ticklist[tickindex];				/* subtract value falling off */
@@ -71,12 +86,35 @@ double CalcAverageTick(int newtick)
 	return((double)ticksum / MAXSAMPLES);
 }
 
+double Calc5PercentLow()
+{
+	int ticksum5 = 0;
+	int ticklist5[MAXSAMPLES];
+	memcpy_s(ticklist5, MAXSAMPLES * sizeof(int), ticklist, MAXSAMPLES * sizeof(int));
+	qsort(ticklist5, 100, sizeof(int), compare);
+	for (int i = 99; i > 94; i--)
+	{
+		ticksum5 += ticklist5[i];
+	}
+	return((double)ticksum5 / 5);
+}
+
+
+
 LRESULT CALLBACK WndProc(HWND hwnd, UINT msg, WPARAM wParam, LPARAM lParam)
 {
 	switch (msg)
 	{
 	case WM_CREATE:
 	{
+		input = (fftwf_complex*)malloc(N * sizeof(fftwf_complex));
+		output = (fftwf_complex*)malloc(N * sizeof(fftwf_complex));
+		initializefft(input, output);
+
+		beatinput = (fftwf_complex*)malloc(DEFAULT_BEATBBUFFERSIZE * sizeof(fftwf_complex));
+		beatoutput = (fftwf_complex*)malloc(DEFAULT_BEATBBUFFERSIZE * sizeof(fftwf_complex));
+		initializefft256(beatinput, beatoutput);
+
 		globalhwnd = hwnd;
 
 		HRESULT hr = S_OK;
@@ -116,7 +154,7 @@ LRESULT CALLBACK WndProc(HWND hwnd, UINT msg, WPARAM wParam, LPARAM lParam)
 		CHECK_ERROR(hr);
 
 		//Sets the update Timer to call every 10ms
-		SetTimer(hwnd, ID_TIMER_UPDATE, 10, NULL);
+		SetTimer(hwnd, ID_TIMER_UPDATE, 1, NULL);
 		//SetTimer(hwnd, ID_TIMER_UPDATE2, 10, NULL);
 	}
 	break;
@@ -144,13 +182,8 @@ LRESULT CALLBACK WndProc(HWND hwnd, UINT msg, WPARAM wParam, LPARAM lParam)
 		hr = GetAudioBuffer(audioBufferLeft, audioBufferRight, stereo);
 		CHECK_ERROR(hr);
 
+		
 		//Calculates fourier transfor of audio data
-		fftwf_complex* input;
-		fftwf_complex* output;
-
-		input = (fftwf_complex*)malloc(N * sizeof(fftwf_complex));
-		output = (fftwf_complex*)malloc(N * sizeof(fftwf_complex));
-
 		CHECK_NULL(input);
 		CHECK_NULL(output);
 
@@ -160,7 +193,7 @@ LRESULT CALLBACK WndProc(HWND hwnd, UINT msg, WPARAM wParam, LPARAM lParam)
 			input[i][IMAG] = 0;
 		}
 
-		fft(input, output);
+		executefft(input, output);
 
 		//Sets the height of the bars calculated by fourier transfor
 		for (int i = 0; i < barCount; i++)
@@ -182,7 +215,7 @@ LRESULT CALLBACK WndProc(HWND hwnd, UINT msg, WPARAM wParam, LPARAM lParam)
 				input[i][IMAG] = 0;
 			}
 
-			fft(input, output);
+			executefft(input, output);
 
 			//Sets the height of the bars calculated by fourier transfor
 			for (int i = 0; i < barCount; i++)
@@ -197,12 +230,13 @@ LRESULT CALLBACK WndProc(HWND hwnd, UINT msg, WPARAM wParam, LPARAM lParam)
 			}
 		}
 
-		free(input);
-		free(output);
-		
+		if (beatDetection)
+		{
+			BassBeatDetector(beatinput, beatoutput);
+		}
 			
 		//Copys audio buffer
-		if(waveform)
+		if (waveform)
 		{
 			RECT windowRect;
 			GetClientRect(hwnd, &windowRect);
@@ -220,21 +254,41 @@ LRESULT CALLBACK WndProc(HWND hwnd, UINT msg, WPARAM wParam, LPARAM lParam)
 			WriteSerial(line, globalhwnd);
 		}
 
-
 		//Calculate fps
 		QueryPerformanceCounter(&EndingTime);
 		ElapsedMicroseconds.QuadPart = EndingTime.QuadPart - StartingTime.QuadPart;
+		QueryPerformanceCounter(&StartingTime);
 
 		ElapsedMicroseconds.QuadPart *= 1000000;
 		ElapsedMicroseconds.QuadPart /= Frequency.QuadPart;
 
-		double averageTick = CalcAverageTick((int)(ElapsedMicroseconds.QuadPart));
+		timeDelta = (float)ElapsedMicroseconds.QuadPart / 1000000;
+		for (int i = 0; i < (float)beatMovementPerSec * timeDelta; i++)
+		{
+			if (beatposition >= 2048)
+				direction = -1;
+			if (beatposition <= 0)
+				direction = 1;
+
+			beatposition += direction;
+		}
+
+		//CalcAverageTick((int)(ElapsedMicroseconds.QuadPart));
+		double averageTick = CalcAverageTick((int)ElapsedMicroseconds.QuadPart);
+		//averageTick = Calc5PercentLow();
 		frameRate = 1000000 / averageTick;
 
-		QueryPerformanceCounter(&StartingTime);
-
 		AddBeatSample((barLeft[3].height + barLeft[4].height + barLeft[5].height + barLeft[6].height) / 4);
-
+		
+		RECT windowRect;
+		GetClientRect(hwnd, &windowRect);
+		InvalidateRect(hwnd, &windowRect, false);
+		
+	}
+	break;
+	case WM_PAINT:
+	{
+		HRESULT hr = S_OK;
 		hr = OnPaint(hwnd, frameRate);
 		CHECK_ERROR(hr);
 	}
@@ -309,6 +363,8 @@ LRESULT CALLBACK WndProc(HWND hwnd, UINT msg, WPARAM wParam, LPARAM lParam)
 		}
 		if (waveform)
 			ResizeBars(hwnd, waveBar, DEFAULT_WAVEBARBOUNT, 0, 0);
+		if (beatDetection)
+			ResizeBars(hwnd, beatBar, N, 0, 0);
 
 		hr = Resize(hwnd);
 		CHECK_ERROR(hr);
@@ -354,13 +410,27 @@ LRESULT CALLBACK WndProc(HWND hwnd, UINT msg, WPARAM wParam, LPARAM lParam)
 			CloseSerial(hwnd);
 
 		KillTimer(hwnd, ID_TIMER_UPDATE);
+		//KillTimer(hwnd, ID_TIMER_UPDATE2);
 
 		//Destroy dialog if open
 		DestroyWindow(hwndStyleDialog);
 		DestroyWindow(hwndDeviceDialog);
 
+		//fft
+		cleanupfft();
+		cleanupfft256();
+		fftwf_cleanup();
+
 		//memory
 		UninitializeMemory();
+		free(input);
+		free(output);
+		free(beatinput);
+		free(beatoutput);
+		input = NULL;
+		output = NULL;
+		beatinput = NULL;
+		beatoutput = NULL;
 
 		PostQuitMessage(0);
 	}

@@ -41,6 +41,7 @@ Define Control IDs
 #define IDC_BUTTON_CIRCLE				(HMENU)1015
 #define IDC_BUTTON_WAVEFORM				(HMENU)1016
 #define IDC_BUTTON_STEREO				(HMENU)1017
+#define IDC_BUTTON_BEATDETECTION		(HMENU)1018
 
 #define IDC_COMBO_COLORS				(HMENU)1020
 
@@ -134,6 +135,13 @@ HRESULT CreateControls(HWND hwnd)
 	if (stereo)
 		SendMessageW(ButtonStereo, BM_SETCHECK, BST_CHECKED, 0);
 
+	HWND ButtonBeatDetection = CreateWindowW(L"Button", L"Beat Detection",
+		WS_CHILD | WS_VISIBLE | BS_AUTOCHECKBOX, 50, 260, 150, 15, hwnd, IDC_BUTTON_BEATDETECTION, NULL, NULL);
+	CHECK_NULL(ButtonBeatDetection);
+
+	if (beatDetection)
+		SendMessageW(ButtonBeatDetection, BM_SETCHECK, BST_CHECKED, 0);
+
 
 	WCHAR strBarCount[5];
 	wsprintfW(strBarCount, L"%d", barCount);
@@ -215,6 +223,7 @@ HRESULT CreateControls(HWND hwnd)
 			IDC_BUTTON_CIRCLE
 			IDC_BUTTON_WAVEFORM
 			IDC_BUTTON_STEREO
+			IDC_BUTTON_BEATDETECTION
 			IDC_EDIT_BARCOUNT
 				EN_CHANGE
 			IDC_COMBO_COLORS
@@ -279,6 +288,7 @@ LRESULT CALLBACK StyleDialogProc(HWND hwnd, UINT Message, WPARAM wParam, LPARAM 
 					IDC_BUTTON_CIRCLE
 					IDC_BUTTON_WAVEFORM
 					IDC_BUTTON_STEREO
+					IDC_BUTTON_BEATDETECTION
 
 					change variable determening the drawing style
 				-----------------------------------------------*/
@@ -333,6 +343,33 @@ LRESULT CALLBACK StyleDialogProc(HWND hwnd, UINT Message, WPARAM wParam, LPARAM 
 						free(barRight);
 						audioBufferRight = NULL;
 						barRight = NULL;
+					}
+				}
+				break;
+				case IDC_BUTTON_BEATDETECTION:
+				{
+					beatDetection = !beatDetection;
+					if (beatDetection)
+					{
+						int* tmp = (int*)realloc(bassBeatBuffer, N * sizeof(int));
+						CHECK_NULL(tmp);
+						bassBeatBuffer = tmp;
+						for (int i = 0; i < N; i++)
+						{
+							bassBeatBuffer[i] = 0;
+						}
+
+						BARINFO* bartmp = (BARINFO*)realloc(beatBar, N * sizeof(BARINFO));
+						CHECK_NULL(bartmp);
+						beatBar = bartmp;
+						ResizeBars(globalhwnd, beatBar, N, 0, 0);
+					}
+					else
+					{
+						free(beatBar);
+						beatBar = NULL;
+						free(bassBeatBuffer);
+						bassBeatBuffer = NULL;
 					}
 				}
 				break;

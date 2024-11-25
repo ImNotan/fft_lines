@@ -46,6 +46,9 @@ defined in settings.h
 			audioBufferLeft
 			audioBufferRight
 
+		Beat buffer:
+			bassBeatBuffer
+
 	Variables (settings):
 		zoom
 		barCount
@@ -56,6 +59,7 @@ defined in settings.h
 		ignoreSerial
 		circle
 		waveform
+		beatdetection
 
 	Variable (information used in drawBar2D):
 		redrawAll
@@ -67,11 +71,14 @@ defined in settings.h
 BARINFO* barLeft = NULL;
 BARINFO* barRight = NULL;
 BARINFO* waveBar = NULL;
+BARINFO* beatBar = NULL;
 
 double* pGradients = &plasma;
 
 INT16* audioBufferLeft = NULL;
 INT16* audioBufferRight = NULL;
+
+int* bassBeatBuffer = NULL;
 
 float zoom = DEFAULT_ZOOM;
 int barCount = DEFAULT_BARCOUNT;
@@ -83,6 +90,7 @@ bool ignoreSerial = DEFAULT_IGNORESERIAL;
 bool circle = DEFAULT_CIRCLE;
 bool waveform = DEFAULT_WAVEFORM;
 bool stereo = DEFAULT_STEREO;
+bool beatDetection = DEFAULT_BEATDETECTION;
 
 bool redrawAll = false;
 
@@ -185,6 +193,7 @@ HRESULT readSettings()
 	if (!ReadFile(hSettingsFile, buffer, fileSize, bytes_read, NULL))
 	{
 		free(buffer);
+		buffer = NULL;
 		return 0;
 	}
 
@@ -229,7 +238,12 @@ HRESULT readSettings()
 	if (stereo < 0 || stereo > 1)
 		stereo = DEFAULT_STEREO;
 
+	beatDetection = strtol(pNextNumber, &pNextNumber, 10);
+	if (beatDetection < 0 || beatDetection > 1)
+		beatDetection = DEFAULT_BEATDETECTION;
+
 	free(buffer);
+	buffer = NULL;
 }
 
 /*-----------------------------------------------
@@ -276,6 +290,22 @@ HRESULT InitializeMemory()
 		ResizeBars(globalhwnd, waveBar, DEFAULT_WAVEBARBOUNT, 0, 0);
 	}
 
+	if (beatDetection)
+	{
+		int* tmp = (int*)realloc(bassBeatBuffer, DEFAULT_BEATBBUFFERSIZE * sizeof(int));
+		CHECK_NULL(tmp);
+		bassBeatBuffer = tmp;
+		for (int i = 0; i < DEFAULT_BEATBBUFFERSIZE; i++)
+		{
+			bassBeatBuffer[i] = 0;
+		}
+
+		BARINFO* bartmp = (BARINFO*)realloc(beatBar, N * sizeof(BARINFO));
+		CHECK_NULL(bartmp);
+		beatBar = bartmp;
+		ResizeBars(globalhwnd, beatBar, N, 0, 0);
+	}
+
 	redrawAll = true;
 
 	return S_OK;
@@ -290,19 +320,42 @@ HRESULT InitializeMemory()
 void UninitializeMemory()
 {
 	if (audioBufferLeft)
+	{
 		free(audioBufferLeft);
+		audioBufferLeft = NULL;
+	}
 
 	if (audioBufferRight)
+	{
 		free(audioBufferRight);
+		audioBufferRight = NULL;
+	}
 
 	if (barLeft)
+	{
 		free(barLeft);
+		barLeft = NULL;
+	}
 
 	if (barRight)
+	{
 		free(barRight);
+		barRight = NULL;
+	}
 
 	if (waveBar)
+	{
 		free(waveBar);
+		waveBar = NULL;
+	}
+
+	if (beatDetection)
+	{
+		free(beatBar);
+		beatBar = NULL;
+		free(bassBeatBuffer);
+		bassBeatBuffer = NULL;
+	}
 }
 
 /*-----------------------------------------------
@@ -320,7 +373,7 @@ void writeSettings()
 	SetFilePointerEx(hSettingsFile, move, NULL, FILE_BEGIN);
 
 	char str[1000];
-	sprintf_s(str, 1000, "%d %0.6f %I64d %d %d %d %d %d %d %d\0", barCount, zoom, colorSel, dofft, background, gradient, ignoreSerial, circle, waveform, stereo);
+	sprintf_s(str, 1000, "%d %0.6f %I64d %d %d %d %d %d %d %d %d\0", barCount, zoom, colorSel, dofft, background, gradient, ignoreSerial, circle, waveform, stereo, beatDetection);
 	WriteFile(hSettingsFile, str, 1000, NULL, NULL);
 }
 
